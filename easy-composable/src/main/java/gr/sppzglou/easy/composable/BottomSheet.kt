@@ -9,12 +9,20 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ModalBottomSheetLayout
+import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.SwipeableDefaults
 import androidx.compose.material.rememberModalBottomSheetState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -26,11 +34,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun BottomSheet(
     state: BottomSheetState,
     backgroundColor: Color = Color.Gray,
-    onStateChange: (Boolean) -> Unit,
+    onStateChange: (Boolean, ModalBottomSheetState) -> Unit,
     lifecycle: LifecycleOwner = LocalLifecycleOwner.current,
     content: @Composable () -> Unit
 ) {
@@ -68,7 +77,7 @@ private fun BottomSheetWrapper(
     sheetState: BottomSheetState,
     content: @Composable () -> Unit,
     backgroundColor: Color,
-    onStateChange: (Boolean) -> Unit
+    onStateChange: (Boolean, ModalBottomSheetState) -> Unit
 ) {
     val act = context() as? FragmentActivity
     val lifecycleAct = lifecycle()
@@ -93,7 +102,7 @@ private fun BottomSheetWrapper(
 
     LaunchedEffect(isSheetVisible) {
         if (!isSheetVisible) {
-            onStateChange(false)
+            onStateChange(false, state)
         }
     }
 
@@ -121,7 +130,7 @@ private fun BottomSheetWrapper(
         ) {}
 
         Launch {
-            onStateChange(true)
+            onStateChange(true, state)
             state.show()
         }
     }
@@ -162,7 +171,7 @@ private fun BottomSheetWrapper(
     LaunchedEffect(lifecycleEvent, lifecycleActEvent) {
         if (lifecycleEvent == Lifecycle.Event.ON_STOP && lifecycleActEvent != Lifecycle.Event.ON_STOP) {
             if (isSheetVisible || sheetState.isVisible || state.isVisible) {
-                onStateChange(false)
+                onStateChange(false, state)
             }
             parent.removeView(composeView)
         }
