@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("maven-publish")
 }
 
 android {
@@ -51,4 +52,17 @@ dependencies {
 
     //Glide
     implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
+
+                groupId = "com.github.sppzglou"
+                artifactId = "easy.composable"
+            }
+        }
+    }
 }
