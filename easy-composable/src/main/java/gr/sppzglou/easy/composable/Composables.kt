@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -47,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -54,6 +56,9 @@ import androidx.lifecycle.LifecycleOwner
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.request.RequestListener
+import com.github.krottv.compose.sliders.DefaultThumb
+import com.github.krottv.compose.sliders.DefaultTrack
+import com.github.krottv.compose.sliders.SliderValueHorizontal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -327,4 +332,47 @@ fun GlideImg(
     ) {
         it.addListener(requestListener)
     }
+}
+
+
+@Composable
+fun <T : Number> SlideBar(
+    distance: MutableState<T>,
+    closedFloatingPointRange: ClosedFloatingPointRange<Float>,
+    onFinish: () -> Unit = {},
+    barColor: Color = Color.White,
+    circleColor: Color = Color.Black,
+    function: (Float) -> Unit
+) {
+    SliderValueHorizontal(
+        distance.value.toFloat(), { function(it) },
+        onValueChangeFinished = {
+            onFinish()
+        },
+        modifier = Modifier.fillMaxWidth(),
+        valueRange = closedFloatingPointRange,
+        thumbSizeInDp = DpSize(8.dp, 8.dp),
+        thumb = { modifier, offset, interactionSource, enabled, thumbSize ->
+            DefaultThumb(
+                modifier, offset, interactionSource, enabled, thumbSize,
+                color = circleColor,
+                scaleOnPress = 2f
+            )
+        },
+        track = { modifier,
+                  fraction,
+                  interactionSource,
+                  tickFractions,
+                  enabled ->
+
+            DefaultTrack(
+                modifier,
+                fraction,
+                interactionSource,
+                tickFractions,
+                enabled,
+                colorTrack = Color.Gray,
+                colorProgress = barColor
+            )
+        })
 }
