@@ -106,12 +106,13 @@ class Camera {
         padding: Dp = 0.dp,
         corners: Dp = 0.dp,
         color1: Color = Color.Black,
-        color2: Color = Color.White
+        color2: Color = Color.White,
+        colorBg: Color = Color.White
     ) {
         val dialogState = rememberBottomSheetState(true, true, false)
 
 
-        BottomSheet(dialogState, onStateChange = { _, _ -> }) {
+        BottomSheet(dialogState, colorBg, { _, _ -> }) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -136,7 +137,9 @@ class Camera {
                         dismissBtn,
                         progressView,
                         padding,
-                        corners
+                        corners,
+                        color1,
+                        color2
                     )
                 }
             }
