@@ -50,17 +50,18 @@ dependencies {
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material3:material3")
 
-    //Glide
-    implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
-
     //CameraX
     val cameraX = "1.3.1"
     implementation("androidx.camera:camera-camera2:$cameraX")
     implementation("androidx.camera:camera-lifecycle:$cameraX")
     implementation("androidx.camera:camera-view:$cameraX")
 
+    //Glide
+    implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
     //sliders
     implementation("com.github.krottv:compose-sliders:0.1.4")
+    //In-app update
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 }
 
 afterEvaluate {
