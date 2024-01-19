@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.ModalBottomSheetDefaults
 import androidx.compose.material.ModalBottomSheetLayout
 import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ModalBottomSheetValue
@@ -39,6 +40,7 @@ import kotlinx.coroutines.launch
 fun BottomSheet(
     state: BottomSheetState,
     backgroundColor: Color = Color.Gray,
+    scrimColor: Color = ModalBottomSheetDefaults.scrimColor,
     onStateChange: (Boolean, ModalBottomSheetState) -> Unit,
     lifecycle: LifecycleOwner = LocalLifecycleOwner.current,
     content: @Composable () -> Unit
@@ -59,6 +61,7 @@ fun BottomSheet(
                             state,
                             content,
                             backgroundColor,
+                            scrimColor,
                             onStateChange
                         )
                     }
@@ -77,6 +80,7 @@ private fun BottomSheetWrapper(
     sheetState: BottomSheetState,
     content: @Composable () -> Unit,
     backgroundColor: Color,
+    scrimColor: Color,
     onStateChange: (Boolean, ModalBottomSheetState) -> Unit
 ) {
     val act = context() as? FragmentActivity
@@ -110,9 +114,9 @@ private fun BottomSheetWrapper(
         ModalBottomSheetLayout(
             sheetGesturesEnabled = sheetState.isCancellable,
             sheetBackgroundColor = Color.Transparent,
+            scrimColor = scrimColor,
             sheetElevation = 0.dp,
             sheetState = state,
-            scrimColor = Color.Transparent,
             sheetContent = {
                 Box(
                     Modifier
