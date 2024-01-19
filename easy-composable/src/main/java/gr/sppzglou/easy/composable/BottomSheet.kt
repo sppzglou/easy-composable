@@ -112,6 +112,7 @@ private fun BottomSheetWrapper(
             sheetBackgroundColor = Color.Transparent,
             sheetElevation = 0.dp,
             sheetState = state,
+            scrimColor = Color.Transparent,
             sheetContent = {
                 Box(
                     Modifier
