@@ -345,6 +345,7 @@ fun <T : Number> SlideBar(
     barColor2: Color = Color.Gray,
     circleColor: Color = Color.Black,
     circleScale: Float = 1f,
+    scaleOnPress: Float = 2f,
     function: (Float) -> Unit
 ) {
     SliderValueHorizontal(
@@ -359,7 +360,7 @@ fun <T : Number> SlideBar(
             DefaultThumb(
                 modifier.scale(circleScale), offset, interactionSource, enabled, thumbSize,
                 color = circleColor,
-                scaleOnPress = 2f
+                scaleOnPress = scaleOnPress
             )
         },
         track = { modifier,
