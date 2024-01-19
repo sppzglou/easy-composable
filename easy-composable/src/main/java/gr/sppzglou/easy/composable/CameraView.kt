@@ -241,10 +241,10 @@ class Camera {
                             var x by rem(0)
                             var y by rem(0)
                             var focusClick by rem(false)
-                            val zoom = rem(0f)
+                            var zoom by rem(0f)
                             var currentZoom by rem(0f)
                             LaunchedEffect(currentZoom) {
-                                zoom.value = currentZoom
+                                zoom = currentZoom
                             }
                             AndroidView(
                                 {
@@ -329,7 +329,7 @@ class Camera {
                                     zoom, 0f..1f,
                                     barColor = color1, circleColor = color2
                                 ) {
-                                    zoom.value = it
+                                    zoom = it
                                     camera?.cameraControl?.setLinearZoom(it)
                                 }
                             }

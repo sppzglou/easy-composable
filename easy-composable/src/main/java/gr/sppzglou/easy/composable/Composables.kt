@@ -38,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -337,15 +338,17 @@ fun GlideImg(
 
 @Composable
 fun <T : Number> SlideBar(
-    distance: MutableState<T>,
+    distance: T,
     closedFloatingPointRange: ClosedFloatingPointRange<Float>,
     onFinish: () -> Unit = {},
     barColor: Color = Color.White,
+    barColor2: Color = Color.Gray,
     circleColor: Color = Color.Black,
+    circleScale: Float = 1f,
     function: (Float) -> Unit
 ) {
     SliderValueHorizontal(
-        distance.value.toFloat(), { function(it) },
+        distance.toFloat(), { function(it) },
         onValueChangeFinished = {
             onFinish()
         },
@@ -354,7 +357,7 @@ fun <T : Number> SlideBar(
         thumbSizeInDp = DpSize(8.dp, 8.dp),
         thumb = { modifier, offset, interactionSource, enabled, thumbSize ->
             DefaultThumb(
-                modifier, offset, interactionSource, enabled, thumbSize,
+                modifier.scale(circleScale), offset, interactionSource, enabled, thumbSize,
                 color = circleColor,
                 scaleOnPress = 2f
             )
@@ -371,7 +374,7 @@ fun <T : Number> SlideBar(
                 interactionSource,
                 tickFractions,
                 enabled,
-                colorTrack = Color.Gray,
+                colorTrack = barColor2,
                 colorProgress = barColor
             )
         })
