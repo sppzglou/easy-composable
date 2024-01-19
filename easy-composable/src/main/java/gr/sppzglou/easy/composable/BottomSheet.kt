@@ -40,8 +40,8 @@ import kotlinx.coroutines.launch
 fun BottomSheet(
     state: BottomSheetState,
     backgroundColor: Color = Color.Gray,
-    scrimColor: Color = ModalBottomSheetDefaults.scrimColor,
     onStateChange: (Boolean, ModalBottomSheetState) -> Unit,
+    scrimColor: Color = ModalBottomSheetDefaults.scrimColor,
     lifecycle: LifecycleOwner = LocalLifecycleOwner.current,
     content: @Composable () -> Unit
 ) {
