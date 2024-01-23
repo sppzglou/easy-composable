@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
@@ -29,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -41,6 +43,7 @@ fun BottomSheet(
     state: BottomSheetState,
     backgroundColor: Color = Color.Gray,
     onStateChange: (Boolean, ModalBottomSheetState) -> Unit,
+    outBottomPadding: Dp = 0.dp,
     scrimColor: Color = ModalBottomSheetDefaults.scrimColor,
     lifecycle: LifecycleOwner = LocalLifecycleOwner.current,
     content: @Composable () -> Unit
@@ -62,6 +65,7 @@ fun BottomSheet(
                             content,
                             backgroundColor,
                             scrimColor,
+                            outBottomPadding,
                             onStateChange
                         )
                     }
@@ -81,6 +85,7 @@ private fun BottomSheetWrapper(
     content: @Composable () -> Unit,
     backgroundColor: Color,
     scrimColor: Color,
+    outBottomPadding: Dp,
     onStateChange: (Boolean, ModalBottomSheetState) -> Unit
 ) {
     val act = context() as? FragmentActivity
@@ -112,6 +117,7 @@ private fun BottomSheetWrapper(
 
     if (isSheetVisible) {
         ModalBottomSheetLayout(
+            modifier = Modifier.padding(bottom = outBottomPadding),
             sheetGesturesEnabled = sheetState.isCancellable,
             sheetBackgroundColor = Color.Transparent,
             scrimColor = scrimColor,
