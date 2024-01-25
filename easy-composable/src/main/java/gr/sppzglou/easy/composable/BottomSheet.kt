@@ -150,7 +150,7 @@ private fun BottomSheetWrapper(
 
     DisposableEffect(sheetState.isVisible) {
         onDispose {
-            if (!sheetState.isVisible) {
+            if (!sheetState.isVisible && sheetState.isCancellable) {
                 scope.launch {
                     state.hide()
                 }
@@ -160,7 +160,7 @@ private fun BottomSheetWrapper(
 
     DisposableEffect(state.isVisible) {
         onDispose {
-            if (!state.isVisible) {
+            if (!state.isVisible && sheetState.isCancellable) {
                 isSheetVisible = false
                 sheetState.hide()
             }
