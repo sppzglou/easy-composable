@@ -99,10 +99,7 @@ private fun BottomSheetWrapper(
     val state = rememberModalBottomSheetState(
         ModalBottomSheetValue.Hidden,
         SwipeableDefaults.AnimationSpec, {
-            if (sheetState.isCancellable) true
-            else {
-                !sheetState.isVisible
-            }
+            sheetState.isCancellable
         }, sheetState.skippHalf
     )
 
@@ -155,7 +152,7 @@ private fun BottomSheetWrapper(
         onDispose {
             if (!sheetState.isVisible) {
                 scope.launch {
-                    isSheetVisible = false
+                    if (!sheetState.isCancellable) isSheetVisible = false
                     state.hide()
                 }
             }
