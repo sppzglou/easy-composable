@@ -167,9 +167,10 @@ private fun BottomSheetWrapper(
         }
     }
 
-    if (sheetState.isCancellable && (isSheetVisible || sheetState.isVisible || state.isVisible)) {
+    if ((isSheetVisible || sheetState.isVisible || state.isVisible)) {
         BackPressHandler {
-            sheetState.hide()
+            if (sheetState.isCancellable)
+                sheetState.hide()
         }
     }
 
