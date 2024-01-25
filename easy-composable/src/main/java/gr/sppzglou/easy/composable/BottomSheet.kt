@@ -1,5 +1,6 @@
 package gr.sppzglou.easy.composable
 
+import android.app.Activity
 import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -51,7 +52,7 @@ fun BottomSheet(
     val con = context()
 
     Launch {
-        (con as? FragmentActivity)?.apply {
+        (con as? Activity)?.apply {
             val viewGroup = this.findViewById(android.R.id.content) as ViewGroup
 
             viewGroup.addView(
@@ -98,7 +99,7 @@ private fun BottomSheetWrapper(
     val state = rememberModalBottomSheetState(
         ModalBottomSheetValue.Hidden,
         SwipeableDefaults.AnimationSpec, {
-            true
+            sheetState.isCancellable
         }, sheetState.skippHalf
     )
 

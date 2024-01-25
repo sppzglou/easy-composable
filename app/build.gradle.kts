@@ -54,4 +54,6 @@ android {
 dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation(project(":easy-composable"))
+
+    implementation("androidx.compose.material:material")
 }
