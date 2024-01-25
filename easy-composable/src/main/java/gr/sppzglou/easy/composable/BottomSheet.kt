@@ -155,6 +155,7 @@ private fun BottomSheetWrapper(
         onDispose {
             if (!sheetState.isVisible) {
                 scope.launch {
+                    isSheetVisible = false
                     state.hide()
                 }
             }
