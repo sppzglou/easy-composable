@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
@@ -27,6 +28,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
@@ -143,12 +146,20 @@ private fun MainBottomSheet(
                                     .padding(10.dp)
                             }
                     ) {
-                        if (it.state.targetValue != ModalBottomSheetValue.Hidden || it.state.isVisible) {
-                            it.content()
+                        var size by rem(DpSize.Zero)
+
+                        if (size == DpSize.Zero || it.state.targetValue != ModalBottomSheetValue.Hidden || it.state.isVisible) {
+                            Box(Modifier.onSizeChanged {
+                                size = DpSize(it.width.toDp.dp, it.height.toDp.dp)
+                            }) {
+                                it.content()
+                            }
 
                             onBack {
                                 if (it.closeOnBack) it.state.hide()
                             }
+                        } else {
+                            Box(Modifier.size(size))
                         }
                     }
                 },
