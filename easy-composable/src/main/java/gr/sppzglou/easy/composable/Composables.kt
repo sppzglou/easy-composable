@@ -172,14 +172,17 @@ fun LifecycleOwner.LifecycleEvents(listener: (Lifecycle.Event) -> Unit = {}) {
 fun BackPressHandler(
     backPressedDispatcher: OnBackPressedDispatcher? =
         LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher,
-    onBackPressed: () -> Unit
+    onBackPressed: suspend () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val currentOnBackPressed by rememberUpdatedState(newValue = onBackPressed)
 
     val backCallback = remember {
         object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                currentOnBackPressed()
+                scope.launch {
+                    currentOnBackPressed()
+                }
             }
         }
     }
