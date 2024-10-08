@@ -22,7 +22,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -95,7 +94,7 @@ private fun BottomSheetWrapper(
     val scope = rememberCoroutineScope()
     var lifecycleActEvent by rem<Lifecycle.Event?>(null)
     var lifecycleEvent by rem<Lifecycle.Event?>(null)
-    //var isSheetVisible by rem(false)
+    var isSheetVisible by rem(false)
 
     val state = rememberModalBottomSheetState(
         ModalBottomSheetValue.Hidden,
@@ -104,22 +103,20 @@ private fun BottomSheetWrapper(
         }, sheetState.skippHalf
     )
 
-    val isVisible by remember(state.targetValue, state.isVisible) {
-        mutableStateOf(state.targetValue != ModalBottomSheetValue.Hidden || state.isVisible)
-    }
-
     LaunchedEffect(sheetState.isVisible) {
         if (sheetState.isVisible) {
             act?.hideKeyboard()
+            isSheetVisible = true
         }
     }
 
-    LaunchedEffect(isVisible) {
-        if (!isVisible) {
+    LaunchedEffect(isSheetVisible) {
+        if (!isSheetVisible) {
             onStateChange(false, state)
         }
     }
 
+    if (isSheetVisible) {
         ModalBottomSheetLayout(
             modifier = Modifier.padding(bottom = outBottomPadding),
             sheetGesturesEnabled = sheetState.isCancellable,
@@ -128,20 +125,18 @@ private fun BottomSheetWrapper(
             sheetElevation = 0.dp,
             sheetState = state,
             sheetContent = {
-                if (isVisible) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .clip(RoundedCornerShape(topEnd = 20.dp, topStart = 20.dp))
-                            .background(backgroundColor)
-                    ) {
-                        if (sheetState.isFullScreen) {
-                            Box(Modifier.fillMaxSize()) {
-                                content()
-                            }
-                        } else content()
-                    }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .clip(RoundedCornerShape(topEnd = 20.dp, topStart = 20.dp))
+                        .background(backgroundColor)
+                ) {
+                    if (sheetState.isFullScreen) {
+                        Box(Modifier.fillMaxSize()) {
+                            content()
+                        }
+                    } else content()
                 }
             }
         ) {}
@@ -150,12 +145,14 @@ private fun BottomSheetWrapper(
             onStateChange(true, state)
             state.show()
         }
+    }
 
 
     DisposableEffect(sheetState.isVisible) {
         onDispose {
             if (!sheetState.isVisible) {
                 scope.launch {
+                    if (!sheetState.isCancellable) isSheetVisible = false
                     state.hide()
                 }
             }
@@ -165,12 +162,13 @@ private fun BottomSheetWrapper(
     DisposableEffect(state.isVisible) {
         onDispose {
             if (!state.isVisible) {
+                isSheetVisible = false
                 sheetState.hide()
             }
         }
     }
 
-    if ((isVisible || sheetState.isVisible || state.isVisible)) {
+    if ((isSheetVisible || sheetState.isVisible || state.isVisible)) {
         BackPressHandler {
             if (sheetState.isCancellable)
                 sheetState.hide()
@@ -186,7 +184,7 @@ private fun BottomSheetWrapper(
 
     LaunchedEffect(lifecycleEvent, lifecycleActEvent) {
         if (lifecycleEvent == Lifecycle.Event.ON_STOP && lifecycleActEvent != Lifecycle.Event.ON_STOP) {
-            if (isVisible || sheetState.isVisible || state.isVisible) {
+            if (isSheetVisible || sheetState.isVisible || state.isVisible) {
                 onStateChange(false, state)
             }
             parent.removeView(composeView)
