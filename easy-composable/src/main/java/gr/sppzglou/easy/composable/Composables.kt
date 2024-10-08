@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -229,7 +229,7 @@ fun Modifier.Click(
     val scope = rememberCoroutineScope()
     return this.clickable(
         interactionSource = interaction,
-        indication = rememberRipple(bounded = bounded, color = ripple),
+        indication = ripple(bounded = bounded, color = ripple),
         onClick = {
             scope.launch {
                 click()

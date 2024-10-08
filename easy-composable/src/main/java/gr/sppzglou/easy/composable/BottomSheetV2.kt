@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ModalBottomSheetDefaults
 import androidx.compose.material.ModalBottomSheetLayout
@@ -35,7 +34,7 @@ import androidx.compose.ui.zIndex
 
 val LocalAppBottomSheet = staticCompositionLocalOf { BottomSheet() }
 
-data class Sheet @OptIn(ExperimentalMaterialApi::class) constructor(
+data class Sheet(
     val state: ModalBottomSheetState,
     val modifier: Modifier,
     val scrimColor: Color,
@@ -43,12 +42,10 @@ data class Sheet @OptIn(ExperimentalMaterialApi::class) constructor(
     val closeOnBack: Boolean,
     val content: (@Composable () -> Unit)
 ) {
-    @OptIn(ExperimentalMaterialApi::class)
     override fun equals(other: Any?): Boolean {
         return other is Sheet && other.state == this.state
     }
 
-    @OptIn(ExperimentalMaterialApi::class)
     override fun hashCode(): Int {
         return state.hashCode()
     }
@@ -66,7 +63,6 @@ data class BottomSheet(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun BottomSheet(
     state: ModalBottomSheetState,
@@ -120,7 +116,6 @@ fun InitBottomSheet(content: @Composable () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun MainBottomSheet(
     sheet: BottomSheet,
@@ -138,13 +133,13 @@ private fun MainBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(15.dp, 15.dp))
-                            .then(it.modifier)
                             .applyIf(it.defaultStyle) {
                                 it
                                     .background(defaultBg)
                                     .navigationBarsPadding()
                                     .padding(10.dp)
                             }
+                            .then(it.modifier)
                     ) {
                         var size by rem(DpSize.Zero)
 
@@ -174,7 +169,6 @@ private fun MainBottomSheet(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun rememberBottomSheetState(
     initialValue: ModalBottomSheetValue,

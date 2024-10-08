@@ -70,9 +70,9 @@ fun CameraView(
     corners: Dp = 0.dp,
     color1: Color = Color.Black,
     color2: Color = Color.White,
-    specialBtn: (@Composable ((File) -> Unit) -> Unit)? = null,
+    specialBtn: (@Composable ((File?, kotlin.Exception?) -> Unit) -> Unit)? = null,
     perfix: String = "",
-    handler: (f: File?) -> Unit = {}
+    handler: (f: File?, e: Exception?) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     val lensFacing by rem(CameraSelector.LENS_FACING_BACK)
@@ -93,19 +93,16 @@ fun CameraView(
     }
     var file by rem<File?>(null)
 
-    fun setFile(f: File) {
-        file = f
-    }
-
     fun handleImageCapture(f: File?, e: Exception?) {
         if (f != null) {
             showPreviewCase = 0
             file = f
+            showPreview = true
         } else {
             file = null
             showPreview = false
             act?.runOnUiThread {
-                handleImageCapture(null, e)
+                handler(null, e)
             }
         }
     }
@@ -249,9 +246,9 @@ fun CameraView(
                         Column(
                             Modifier
                                 .fillMaxHeight()
-                                .padding(start = 10.dp), Arrangement.Center
+                                .padding(start = 10.dp), Arrangement.Bottom
                         ) {
-                            it.invoke(::setFile)
+                            it.invoke(::handleImageCapture)
                         }
                     }
                     Column(
@@ -271,7 +268,6 @@ fun CameraView(
                                 onImageCaptured = ::handleImageCapture
                             )
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            showPreview = true
                         }
                     }
                 }
@@ -302,11 +298,11 @@ fun CameraView(
                         Arrangement.SpaceBetween,
                         Alignment.Bottom
                     ) {
-                        acceptBtn {
+                        dismissBtn {
                             dismiss()
                         }
-                        dismissBtn {
-                            handler(file)
+                        acceptBtn {
+                            handler(file, null)
                             close()
                             showPreview = false
                             file = null
