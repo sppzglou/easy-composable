@@ -323,7 +323,7 @@ private fun takePhoto(
     executor: Executor,
     onImageCaptured: (f: File?, e: Exception?) -> Unit
 ) {
-    val file = context.createPhotoFile(perfix)
+    val file = context.createPhotoFile2(perfix)
     val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
     imageCapture.takePicture(
