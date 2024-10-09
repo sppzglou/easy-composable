@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Text
 import androidx.compose.runtime.rememberCoroutineScope
@@ -32,14 +31,13 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    @OptIn(ExperimentalMaterialApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val scope = rememberCoroutineScope()
             InitBottomSheet {
                 val sheet =
-                    rememberBottomSheetState(ModalBottomSheetValue.Hidden, false, false)
+                    rememberBottomSheetState(ModalBottomSheetValue.Hidden, false)
 
 
                 Button(onClick = {

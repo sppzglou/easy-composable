@@ -17,11 +17,8 @@ import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -133,13 +130,13 @@ private fun MainBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(15.dp, 15.dp))
+                            .then(it.modifier)
                             .applyIf(it.defaultStyle) {
                                 it
                                     .background(defaultBg)
                                     .navigationBarsPadding()
                                     .padding(10.dp)
                             }
-                            .then(it.modifier)
                     ) {
                         var size by rem(DpSize.Zero)
 
@@ -175,21 +172,20 @@ fun rememberBottomSheetState(
     skipHalfExpanded: Boolean = false,
     isCancellable: Boolean = true,
 ): ModalBottomSheetState {
-    var confirmValueChange by rememberSaveable { mutableStateOf(isCancellable) }
     val state =
         rememberModalBottomSheetState(
             initialValue,
             confirmValueChange = {
-                confirmValueChange
+                // Ελέγχουμε αν επιτρέπεται η αλλαγή της κατάστασης
+                if (isCancellable) {
+                    it == ModalBottomSheetValue.Hidden
+                } else {
+                    false
+                }
             },
             skipHalfExpanded = skipHalfExpanded
         )
 
-    if (!isCancellable) {
-        LaunchedEffect(state.currentValue) {
-            confirmValueChange = state.currentValue == ModalBottomSheetValue.Hidden
-        }
-    }
     return state
 }
 
