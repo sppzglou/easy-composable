@@ -246,6 +246,8 @@ fun CameraView(
                         Column(
                             Modifier
                                 .fillMaxHeight()
+                                .navigationBarsPadding()
+                                .padding(bottom = 20.dp)
                                 .padding(start = 10.dp), Arrangement.Bottom
                         ) {
                             it.invoke(::handleImageCapture)

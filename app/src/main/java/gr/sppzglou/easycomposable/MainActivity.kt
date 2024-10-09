@@ -6,13 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Text
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -36,8 +35,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val scope = rememberCoroutineScope()
             InitBottomSheet {
-                val sheet =
-                    rememberBottomSheetState(ModalBottomSheetValue.Hidden, false)
+                val sheet = rememberBottomSheetState()
 
 
                 Button(onClick = {
@@ -48,11 +46,11 @@ class MainActivity : ComponentActivity() {
                     Text("Click me!")
                 }
 
-                BottomSheet(sheet, defaultStyle = false) {
+                BottomSheet(Modifier, sheet, skipHalfExpanded = true, isCancellable = false) {
                     Column(
                         Modifier
                             .navigationBarsPadding()
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .padding(horizontal = 20.dp)
                             .padding(bottom = 50.dp)
                             .shadow(5.dp, RoundedCornerShape(10.dp))
