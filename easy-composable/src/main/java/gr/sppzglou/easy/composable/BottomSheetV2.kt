@@ -1,6 +1,5 @@
 package gr.sppzglou.easy.composable
 
-import androidx.camera.core.TorchState.State
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +13,7 @@ import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -200,13 +200,13 @@ fun rememberBottomSheetState(
     initialValue: Boolean = false
 ): BottomSheetStateV2 {
     return rememberSaveable(
-        saver = BottomSheetStateV2.Saver()
+        saver = BottomSheetStateV2.Saver
     ) {
         BottomSheetStateV2(initialValue)
     }
 }
 
-@State
+@Stable
 class BottomSheetStateV2(
     initialValue: Boolean
 ) {
@@ -221,7 +221,7 @@ class BottomSheetStateV2(
     }
 
     companion object {
-        fun Saver(): Saver<BottomSheetStateV2, *> = Saver(
+        val Saver: Saver<BottomSheetStateV2, Boolean> = Saver(
             save = { it.isVisible },
             restore = { BottomSheetStateV2(it) }
         )
