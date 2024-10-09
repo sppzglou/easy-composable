@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.shape.RoundedCornerShape
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.ModalBottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -23,7 +25,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -124,72 +125,28 @@ private fun MainBottomSheet(
             val isVisible by remember(sheet.state.isVisible) {
                 mutableStateOf(sheet.state.isVisible)
             }
-            val sheetState =
-                androidx.compose.material3.rememberModalBottomSheetState(sheet.skipHalfExpanded,
-                    confirmValueChange = {
-                        sheet.isCancellable
-                    })
 
             if (isVisible) {
                 ModalBottomSheet(
                     onDismissRequest = {
                         sheet.state.hide()
                     },
-                    sheetState = sheetState,
+                    sheetState = rememberModalBottomSheetState(
+                        sheet.skipHalfExpanded,
+                        confirmValueChange = {
+                            sheet.isCancellable
+                        }),
                     scrimColor = sheet.scrimColor,
                     containerColor = Color.Transparent,
                     contentWindowInsets = { WindowInsets.ime },
                     shape = RoundedCornerShape(15.dp, 15.dp, 0.dp, 0.dp),
                     properties = ModalBottomSheetProperties(shouldDismissOnBackPress = sheet.isCancellable)
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(15.dp, 15.dp))
-                            .then(sheet.modifier)
-                    ) {
+                    Box(Modifier.fillMaxWidth()) {
                         sheet.content()
                     }
                 }
             }
-//            ModalBottomSheetLayout(
-//                {
-//                    Box(
-//                        Modifier
-//                            .fillMaxWidth()
-//                            .clip(RoundedCornerShape(15.dp, 15.dp))
-//                            .then(it.modifier)
-//                            .applyIf(it.defaultStyle) {
-//                                it
-//                                    .background(defaultBg)
-//                                    .navigationBarsPadding()
-//                                    .padding(10.dp)
-//                            }
-//                    ) {
-//                        var size by rem(DpSize.Zero)
-//
-//                        if (size == DpSize.Zero || it.state.targetValue != ModalBottomSheetValue.Hidden || it.state.isVisible) {
-//                            Box(Modifier.onSizeChanged {
-//                                size = DpSize(it.width.toDp.dp, it.height.toDp.dp)
-//                            }) {
-//                                it.content()
-//                            }
-//
-//                            onBack {
-//                                if (it.closeOnBack) it.state.hide()
-//                            }
-//                        } else {
-//                            Box(Modifier.size(size))
-//                        }
-//                    }
-//                },
-//                Modifier.zIndex(1f),
-//                sheetElevation = 0.dp,
-//                sheetState = it.state,
-//                scrimColor = it.scrimColor,
-//                sheetBackgroundColor = Color.Transparent,
-//                sheetGesturesEnabled = it.closeOnBack
-//            ) {}
         }
     }
 }
