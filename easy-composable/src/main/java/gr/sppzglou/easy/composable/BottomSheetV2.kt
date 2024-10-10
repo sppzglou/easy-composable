@@ -1,17 +1,8 @@
 package gr.sppzglou.easy.composable
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.shape.RoundedCornerShape
-//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.ModalBottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -19,24 +10,19 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
 val LocalAppBottomSheet = staticCompositionLocalOf { BottomSheet() }
 
 data class Sheet(
-    val state: BottomSheetStateV2,
-    val skipHalfExpanded: Boolean,
+    val state: BottomSheetStateV3,
     val modifier: Modifier,
     val scrimColor: Color,
-    val defaultStyle: Boolean,
-    val isCancellable: Boolean,
     val content: (@Composable () -> Unit)
 ) {
     override fun equals(other: Any?): Boolean {
@@ -63,7 +49,7 @@ data class BottomSheet(
 @Composable
 fun BottomSheet(
     modifier: Modifier = Modifier,
-    state: BottomSheetStateV2,
+    state: BottomSheetStateV3,
     skipHalfExpanded: Boolean = false,
     scrimColor: Color = ModalBottomSheetDefaults.scrimColor,
     defaultStyle: Boolean = true,
@@ -76,11 +62,8 @@ fun BottomSheet(
         screenSheets.addSheet(
             Sheet(
                 state,
-                skipHalfExpanded,
                 modifier,
                 scrimColor,
-                defaultStyle,
-                isCancellable,
                 sheetContent
             )
         )
@@ -89,11 +72,8 @@ fun BottomSheet(
             screenSheets.removeSheet(
                 Sheet(
                     state,
-                    skipHalfExpanded,
                     modifier,
                     scrimColor,
-                    defaultStyle,
-                    isCancellable,
                     sheetContent
                 )
             )
@@ -112,7 +92,6 @@ fun InitBottomSheet(content: @Composable () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainBottomSheet(
     sheet: BottomSheet,
@@ -122,31 +101,8 @@ private fun MainBottomSheet(
         content()
 
         sheet.sheets.forEachIndexed { i, sheet ->
-            val isVisible by remember(sheet.state.isVisible) {
-                mutableStateOf(sheet.state.isVisible)
-            }
 
-            if (isVisible) {
-                ModalBottomSheet(
-                    onDismissRequest = {
-                        sheet.state.hide()
-                    },
-                    sheetState = rememberModalBottomSheetState(
-                        sheet.skipHalfExpanded,
-                        confirmValueChange = {
-                            sheet.isCancellable
-                        }),
-                    scrimColor = sheet.scrimColor,
-                    containerColor = Color.Transparent,
-                    contentWindowInsets = { WindowInsets.ime },
-                    shape = RoundedCornerShape(15.dp, 15.dp, 0.dp, 0.dp),
-                    properties = ModalBottomSheetProperties(shouldDismissOnBackPress = sheet.isCancellable)
-                ) {
-                    Box(Modifier.fillMaxWidth()) {
-                        sheet.content()
-                    }
-                }
-            }
+            BottomSheet(sheet.state, sheet.modifier, sheet.scrimColor, sheet.content)
         }
     }
 }
