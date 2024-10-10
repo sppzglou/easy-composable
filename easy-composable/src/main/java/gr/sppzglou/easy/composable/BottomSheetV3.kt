@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -46,7 +47,7 @@ fun rememberBottomSheetState(
     initialValue: BottomSheetValueV3 = BottomSheetValueV3.Hidden,
     skipHalfExpanded: Boolean = false,
     isCancellable: Boolean = true,
-    confirmValueChange: (BottomSheetValueV3) -> Boolean = { isCancellable },
+    confirmValueChange: (BottomSheetValueV3) -> Boolean = { true },
 ): BottomSheetStateV3 {
     return key(initialValue) {
         rememberSaveable(
@@ -80,8 +81,8 @@ class BottomSheetStateV3(
         initialValue = initialValue,
         positionalThreshold = { totalDistance -> totalDistance * 0.5f },
         velocityThreshold = { 500f },  // Καθορίζει την ταχύτητα για το σύρσιμο
-        snapAnimationSpec = tween(),  // Η κινούμενη εικόνα
-        decayAnimationSpec = exponentialDecay(),  // Decay animation
+        snapAnimationSpec = tween(500),  // Η κινούμενη εικόνα
+        decayAnimationSpec = exponentialDecay(0.1f, 1f),  // Decay animation
         confirmValueChange = confirmValueChange  // Λειτουργία που επιβεβαιώνει την αλλαγή της τιμής
     )
     val showSize = mutableFloatStateOf(0f)
@@ -252,7 +253,11 @@ fun BottomSheet(
             state = state.draggableState
         )
     }
-    val scrim by animateColorAsState(if (state.targetValue != BottomSheetValueV3.Hidden && state.sheetHeight.intValue > 0) scrimColor else Color.Transparent)
+    val scrim by animateColorAsState(
+        if (state.targetValue != BottomSheetValueV3.Hidden && state.sheetHeight.intValue > 0)
+            scrimColor else Color.Transparent,
+        tween()
+    )
 
     LaunchedEffect(state.layoutHeight.intValue, state.sheetHeight.intValue) {
         if (state.layoutHeight.intValue > 0 && state.sheetHeight.intValue > 0) {
@@ -302,10 +307,13 @@ fun BottomSheet(
                     .onSizeChanged {
                         state.sheetHeight.intValue = it.height
                     }
+                    .alpha(if (state.sheetHeight.intValue == 0) 0f else 1f)
             ) {
                 if (state.isVisibleReal || state.sheetHeight.intValue == 0) {
-                    BackPressHandler {
-                        if (state.isCancellable) state.hide()
+                    if (scrimColor != Color.Unspecified) {
+                        BackPressHandler {
+                            if (state.isCancellable) state.hide()
+                        }
                     }
                     content()
                 }

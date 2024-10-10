@@ -16,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.zIndex
 
 val LocalAppBottomSheet = staticCompositionLocalOf { BottomSheet() }
 
@@ -51,10 +50,7 @@ data class BottomSheet(
 fun BottomSheet(
     modifier: Modifier = Modifier,
     state: BottomSheetStateV3,
-    skipHalfExpanded: Boolean = false,
     scrimColor: Color = ModalBottomSheetDefaults.scrimColor,
-    defaultStyle: Boolean = true,
-    isCancellable: Boolean = true,
     sheetContent: @Composable () -> Unit
 ) {
     val screenSheets = LocalAppBottomSheet.current
@@ -89,30 +85,21 @@ fun InitBottomSheet(content: @Composable () -> Unit) {
     CompositionLocalProvider(
         LocalAppBottomSheet provides sheet
     ) {
-        MainBottomSheet(sheet, content)
-    }
-}
 
-@Composable
-private fun MainBottomSheet(
-    sheet: BottomSheet,
-    content: @Composable () -> Unit,
-) {
-    Box(Modifier.fillMaxSize()) {
-        content()
+        Box(Modifier.fillMaxSize()) {
+            content()
 
-        sheet.sheets.forEachIndexed { i, sheet ->
-
-            Box(
-                Modifier
-                    .zIndex(1f)
-                    .fillMaxSize()) {
-                BottomSheet(sheet.state, sheet.modifier, sheet.scrimColor, sheet.content)
+            sheet.sheets.forEachIndexed { i, sheet ->
+                BottomSheet(
+                    sheet.state,
+                    sheet.modifier,
+                    sheet.scrimColor,
+                    sheet.content
+                )
             }
         }
     }
 }
-
 
 @Composable
 fun rememberBottomSheetState(
