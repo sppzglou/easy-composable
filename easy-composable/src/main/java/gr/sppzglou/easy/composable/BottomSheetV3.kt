@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
@@ -179,21 +180,41 @@ class BottomSheetStateV3(
         return offset.roundToInt()
     }
 
+    private fun calcDragEndPoint(state: BottomSheetValueV3): Float {
+        val fractionatedMaxDragEndPoint = layoutHeight.intValue * state.draggableSpaceFraction
+        return layoutHeight.intValue.toFloat() - min(
+            fractionatedMaxDragEndPoint,
+            sheetHeight.intValue.toFloat()
+        )
+    }
     fun updateAnchors() {
         val newAnchors = DraggableAnchors {
-            // Προσθήκη anchor για την κατάσταση "Hidden"
-            BottomSheetValueV3.Hidden at layoutHeight.intValue.toFloat()
-
-            // Αν δεν παρακάμπτουμε το HalfExpanded, προσθέτουμε anchor και για αυτή την κατάσταση
+            BottomSheetValueV3.Hidden at calcDragEndPoint(BottomSheetValueV3.Hidden)
             if (!skipHalfExpanded) {
-                BottomSheetValueV3.HalfExpanded at (layoutHeight.intValue * 0.5f)
+                BottomSheetValueV3.HalfExpanded at calcDragEndPoint(BottomSheetValueV3.HalfExpanded)
             }
-
-            // Προσθήκη anchor για την κατάσταση "Expanded"
-            BottomSheetValueV3.Expanded at (layoutHeight.intValue - sheetHeight.intValue.toFloat())
+            BottomSheetValueV3.Expanded at calcDragEndPoint(BottomSheetValueV3.Expanded)
         }
         draggableState.updateAnchors(newAnchors)
     }
+
+//    fun updateAnchors() {
+//        val newAnchors = DraggableAnchors {
+//            // Anchor για το "Hidden" εκτός της οθόνης
+//            BottomSheetValueV3.Hidden at (layoutHeight.intValue + sheetHeight.intValue).toFloat()
+//
+//            // Anchor για το "HalfExpanded" αν δεν παρακάμπτεται
+//            if (!skipHalfExpanded) {
+//                BottomSheetValueV3.HalfExpanded at (layoutHeight.intValue * 0.5f)
+//            }
+//
+//            // Anchor για το "Expanded" στην κορυφή του bottom sheet
+//            BottomSheetValueV3.Expanded at (layoutHeight.intValue - sheetHeight.intValue.toFloat())
+//        }
+//
+//        // Ενημέρωση των anchors
+//        draggableState.updateAnchors(newAnchors)
+//    }
 
     private suspend fun animateTo(
         targetValue: BottomSheetValueV3,

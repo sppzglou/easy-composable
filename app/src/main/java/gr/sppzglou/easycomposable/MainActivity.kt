@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.rememberCoroutineScope
@@ -25,7 +24,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val state: BottomSheetStateV3 = rememberBottomSheetState(BottomSheetValueV3.Hidden)
+            val state: BottomSheetStateV3 =
+                rememberBottomSheetState(BottomSheetValueV3.Hidden, skipHalfExpanded = true)
             val scope = rememberCoroutineScope()
 
             Box(Modifier.fillMaxSize()) {
@@ -44,8 +44,13 @@ class MainActivity : ComponentActivity() {
                 }
 
                 BottomSheet(state) {
-                    LazyColumn {
-                        items(100) {
+//                    LazyColumn {
+//                        items(100) {
+//                            Text("$it", Modifier.fillMaxWidth())
+//                        }
+//                    }
+                    Column {
+                        (0..10).forEach {
                             Text("$it", Modifier.fillMaxWidth())
                         }
                     }
