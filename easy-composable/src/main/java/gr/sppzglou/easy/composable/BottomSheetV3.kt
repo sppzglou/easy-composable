@@ -285,7 +285,7 @@ fun BottomSheet(
             state.updateAnchors()
         }
     }
-    if (state.targetValue != BottomSheetValueV3.Hidden || state.isVisibleReal) {
+    if (state.targetValue != BottomSheetValueV3.Hidden || state.isVisibleReal || state.sheetHeight.intValue == 0) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
