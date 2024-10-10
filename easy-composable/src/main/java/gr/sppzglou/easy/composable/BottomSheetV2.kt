@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.zIndex
 
 val LocalAppBottomSheet = staticCompositionLocalOf { BottomSheet() }
 
@@ -102,7 +103,12 @@ private fun MainBottomSheet(
 
         sheet.sheets.forEachIndexed { i, sheet ->
 
-            BottomSheet(sheet.state, sheet.modifier, sheet.scrimColor, sheet.content)
+            Box(
+                Modifier
+                    .zIndex(1f)
+                    .fillMaxSize()) {
+                BottomSheet(sheet.state, sheet.modifier, sheet.scrimColor, sheet.content)
+            }
         }
     }
 }

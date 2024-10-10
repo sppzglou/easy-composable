@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -26,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -78,14 +78,16 @@ class BottomSheetStateV3(
 
     val draggableState = AnchoredDraggableState(
         initialValue = initialValue,
-        positionalThreshold = { totalDistance -> totalDistance * 0.1f },
+        positionalThreshold = { totalDistance -> totalDistance * 0.5f },
         velocityThreshold = { 500f },  // Καθορίζει την ταχύτητα για το σύρσιμο
         snapAnimationSpec = tween(),  // Η κινούμενη εικόνα
         decayAnimationSpec = exponentialDecay(),  // Decay animation
         confirmValueChange = confirmValueChange  // Λειτουργία που επιβεβαιώνει την αλλαγή της τιμής
     )
     val showSize = mutableFloatStateOf(0f)
-    private var layoutSize = 0
+
+    val layoutHeight = mutableIntStateOf(0)
+    val sheetHeight = mutableIntStateOf(0)
 
     /**
      * The current value of the [BottomSheetStateV3].
@@ -167,37 +169,27 @@ class BottomSheetStateV3(
     }
 
     fun requireOffset(): Int {
-        val offset = draggableState.requireOffset()
-        showSize.floatValue = layoutSize - offset
+        val offset = try {
+            draggableState.requireOffset()
+        } catch (_: Exception) {
+            0f
+        }
+        showSize.floatValue = layoutHeight.intValue - offset
         return offset.roundToInt()
     }
 
-    //    fun updateAnchors(layoutHeight: Int, sheetHeight: Int) {
-//        layoutSize = layoutHeight
-//        val newAnchors = DraggableAnchors {
-//            HideableBottomSheetValue.entries
-//                .forEach { anchor ->
-//                    val fractionatedMaxDragEndPoint = layoutHeight * anchor.draggableSpaceFraction
-//                    val dragEndPoint =
-//                        layoutHeight - min(fractionatedMaxDragEndPoint, sheetHeight.toFloat())
-//                    anchor at dragEndPoint
-//                }
-//        }
-//        draggableState.updateAnchors(newAnchors)
-//    }
-    fun updateAnchors(layoutHeight: Int, sheetHeight: Int) {
-        layoutSize = layoutHeight
+    fun updateAnchors() {
         val newAnchors = DraggableAnchors {
             // Προσθήκη anchor για την κατάσταση "Hidden"
-            BottomSheetValueV3.Hidden at layoutHeight.toFloat()
+            BottomSheetValueV3.Hidden at layoutHeight.intValue.toFloat()
 
             // Αν δεν παρακάμπτουμε το HalfExpanded, προσθέτουμε anchor και για αυτή την κατάσταση
             if (!skipHalfExpanded) {
-                BottomSheetValueV3.HalfExpanded at (layoutHeight * 0.5f)
+                BottomSheetValueV3.HalfExpanded at (layoutHeight.intValue * 0.5f)
             }
 
             // Προσθήκη anchor για την κατάσταση "Expanded"
-            BottomSheetValueV3.Expanded at (layoutHeight - sheetHeight.toFloat())
+            BottomSheetValueV3.Expanded at (layoutHeight.intValue - sheetHeight.intValue.toFloat())
         }
         draggableState.updateAnchors(newAnchors)
     }
@@ -255,68 +247,68 @@ fun BottomSheet(
     content: @Composable () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var layoutHeight by remember { mutableIntStateOf(0) }
-    var sheetHeight by remember { mutableIntStateOf(0) }
     val bottomSheetNestedScrollConnection = remember(state.draggableState) {
         consumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
             state = state.draggableState
         )
     }
-    val scrim by animateColorAsState(if (state.targetValue != BottomSheetValueV3.Hidden && sheetHeight > 0) scrimColor else Color.Transparent)
+    val scrim by animateColorAsState(if (state.targetValue != BottomSheetValueV3.Hidden && state.sheetHeight.intValue > 0) scrimColor else Color.Transparent)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(scrim)
-            .applyIf(state.isVisible && state.isCancellable) {
-                pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-                        scope.launch {
-                            state.hide()
-                        }
-                    })
-                }
-            }
-            .onSizeChanged {
-                layoutHeight = it.height
-                if (layoutHeight > 0 && sheetHeight > 0) {
-                    state.updateAnchors(layoutHeight, sheetHeight)
-                }
-            }
-            .offset {
-                val yOffset = state.requireOffset()
-                IntOffset(x = 0, y = yOffset)
-            }
-            .anchoredDraggable(
-                state = state.draggableState,
-                orientation = Orientation.Vertical,
-                enabled = state.isCancellable
-            )
-            .nestedScroll(
-                if (state.isCancellable) bottomSheetNestedScrollConnection
-                else {
-                    object : NestedScrollConnection {
-
-                    }
-                }
-            )
-            .then(modifier)
-    ) {
+    LaunchedEffect(state.layoutHeight.intValue, state.sheetHeight.intValue) {
+        if (state.layoutHeight.intValue > 0 && state.sheetHeight.intValue > 0) {
+            state.updateAnchors()
+        }
+    }
+    if (state.targetValue != BottomSheetValueV3.Hidden || state.isVisibleReal) {
         Box(
             modifier = Modifier
-                .wrapContentSize()
-                .onSizeChanged {
-                    sheetHeight = it.height
-                    if (layoutHeight > 0 && sheetHeight > 0) {
-                        state.updateAnchors(layoutHeight, sheetHeight)
+                .fillMaxSize()
+                .background(scrim)
+                .applyIf(state.isVisible && state.isCancellable) {
+                    pointerInput(Unit) {
+                        detectTapGestures(onTap = {
+                            scope.launch {
+                                state.hide()
+                            }
+                        })
                     }
                 }
-        ) {
-            if (state.isVisibleReal || sheetHeight == 0) {
-                BackPressHandler {
-                    if (state.isCancellable) state.hide()
+                .onSizeChanged {
+                    state.layoutHeight.intValue = it.height
                 }
-                content()
+                .offset {
+                    val yOffset = state.requireOffset()
+                    IntOffset(x = 0, y = yOffset)
+                }
+                .anchoredDraggable(
+                    state = state.draggableState,
+                    orientation = Orientation.Vertical,
+                    enabled = state.isCancellable
+                )
+                .nestedScroll(
+                    if (state.isCancellable) bottomSheetNestedScrollConnection
+                    else {
+                        object : NestedScrollConnection {
+
+                        }
+                    }
+                )
+                .then(modifier)
+        ) {
+            Box(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .Tap { }
+                    .onSizeChanged {
+                        state.sheetHeight.intValue = it.height
+                    }
+            ) {
+                if (state.isVisibleReal || state.sheetHeight.intValue == 0) {
+                    BackPressHandler {
+                        if (state.isCancellable) state.hide()
+                    }
+                    content()
+                }
             }
         }
     }
