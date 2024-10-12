@@ -291,7 +291,7 @@ fun BottomSheet(
             modifier = Modifier
                 .fillMaxSize()
                 .background(scrim)
-                .applyIf(state.isVisible) {
+                .applyIf(state.isVisible && scrimColor != Color.Unspecified) {
                     pointerInput(Unit) {
                         detectTapGestures(onTap = {
                             if (state.isCancellable) {
