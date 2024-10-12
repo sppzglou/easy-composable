@@ -81,8 +81,8 @@ class BottomSheetStateV3(
     val draggableState = AnchoredDraggableState(
         initialValue = initialValue,
         positionalThreshold = { totalDistance -> totalDistance * 0.5f },
-        velocityThreshold = { 500f },  // Καθορίζει την ταχύτητα για το σύρσιμο
-        snapAnimationSpec = tween(500),  // Η κινούμενη εικόνα
+        velocityThreshold = { 300f },  // Καθορίζει την ταχύτητα για το σύρσιμο
+        snapAnimationSpec = tween(300),  // Η κινούμενη εικόνα
         decayAnimationSpec = exponentialDecay(0.1f, 1f),  // Decay animation
         confirmValueChange = confirmValueChange  // Λειτουργία που επιβεβαιώνει την αλλαγή της τιμής
     )
@@ -187,6 +187,7 @@ class BottomSheetStateV3(
             sheetHeight.intValue.toFloat()
         )
     }
+
     fun updateAnchors() {
         val newAnchors = DraggableAnchors {
             BottomSheetValueV3.Hidden at calcDragEndPoint(BottomSheetValueV3.Hidden)
@@ -290,11 +291,13 @@ fun BottomSheet(
             modifier = Modifier
                 .fillMaxSize()
                 .background(scrim)
-                .applyIf(state.isVisible && state.isCancellable) {
+                .applyIf(state.isVisible) {
                     pointerInput(Unit) {
                         detectTapGestures(onTap = {
-                            scope.launch {
-                                state.hide()
+                            if (state.isCancellable) {
+                                scope.launch {
+                                    state.hide()
+                                }
                             }
                         })
                     }
