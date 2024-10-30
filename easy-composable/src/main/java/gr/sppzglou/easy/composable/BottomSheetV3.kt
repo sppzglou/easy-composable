@@ -326,12 +326,12 @@ fun BottomSheet(
         ) {
             Box(
                 modifier = Modifier
+                    .alpha(if (state.sheetHeight.intValue == 0) 0f else 1f)
                     .wrapContentSize()
                     .Tap { }
                     .onSizeChanged {
                         state.sheetHeight.intValue = it.height
                     }
-                    .alpha(if (state.sheetHeight.intValue == 0) 0f else 1f)
             ) {
                 if (state.isVisibleReal || state.sheetHeight.intValue == 0) {
                     if (scrimColor != Color.Unspecified) {
