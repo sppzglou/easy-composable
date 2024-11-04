@@ -10,12 +10,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import gr.sppzglou.easy.composable.BottomSheet
-import gr.sppzglou.easy.composable.BottomSheetStateV3
-import gr.sppzglou.easy.composable.BottomSheetValueV3
+import gr.sppzglou.easy.composable.BottomSheetStateV4
+import gr.sppzglou.easy.composable.BottomSheetValues
+import gr.sppzglou.easy.composable.Launch
+import gr.sppzglou.easy.composable.SpacerV
+import gr.sppzglou.easy.composable.rem
 import gr.sppzglou.easy.composable.rememberBottomSheetState
 import kotlinx.coroutines.launch
 
@@ -24,8 +29,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val state: BottomSheetStateV3 =
-                rememberBottomSheetState(BottomSheetValueV3.Hidden, skipHalfExpanded = true)
+            val state: BottomSheetStateV4 =
+                rememberBottomSheetState(BottomSheetValues.Hidden, skipHalfExpanded = false)
             val scope = rememberCoroutineScope()
 
             Box(Modifier.fillMaxSize()) {
@@ -39,20 +44,35 @@ class MainActivity : ComponentActivity() {
                             state.show()
                         }
                     }) {
-                        Text("Show Bottom Sheet")
+
+                        Text("${state.isVisible} ${state.isVisibleReal}")
                     }
                 }
 
                 BottomSheet(state) {
+                    var list by rem(0..0)
 //                    LazyColumn {
 //                        items(100) {
 //                            Text("$it", Modifier.fillMaxWidth())
 //                        }
 //                    }
+
+                    Launch {
+                        //delay(2000)
+                        list = 0..20
+                    }
+
                     Column {
-                        (0..10).forEach {
+                        //Text("SKATA!!", Modifier.fillMaxWidth(), fontSize = 30.sp, color = Color.White)
+                        SpacerV(190.dp)
+                        list.forEach {
                             Text("$it", Modifier.fillMaxWidth())
                         }
+//                        LazyColumn {
+//                            items(100) {
+//                                Text("$it", Modifier.fillMaxWidth())
+//                            }
+//                        }
                     }
                 }
             }

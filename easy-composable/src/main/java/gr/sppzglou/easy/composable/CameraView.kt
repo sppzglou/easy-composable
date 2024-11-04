@@ -273,8 +273,8 @@ class Camera {
                                                         motionEvent.x,
                                                         motionEvent.y
                                                     )
-                                                    x = motionEvent.x.toInt().toDp
-                                                    y = motionEvent.y.toInt().toDp
+                                                    x = motionEvent.x.toDp.toInt()
+                                                    y = motionEvent.y.toDp.toInt()
                                                     focusClick = true
                                                     val action =
                                                         FocusMeteringAction.Builder(point).build()

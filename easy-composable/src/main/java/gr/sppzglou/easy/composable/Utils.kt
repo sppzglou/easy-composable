@@ -9,8 +9,8 @@ import androidx.compose.ui.unit.dp
 import java.math.RoundingMode
 import java.text.DecimalFormat
 
-val Int.toDp: Int
-    get() = (this / Resources.getSystem().displayMetrics.density).toInt()
+val Number.toDp: Float
+    get() = (this.toFloat() / Resources.getSystem().displayMetrics.density)
 
 fun safeDp(value: Dp): Dp {
     return if (value >= 0.dp) value

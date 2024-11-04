@@ -1,7 +1,9 @@
 package gr.sppzglou.easy.composable
 
+import android.content.res.Resources
+import androidx.compose.animation.SplineBasedFloatDecayAnimationSpec
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.generateDecayAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -36,6 +38,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -81,9 +84,9 @@ class BottomSheetStateV3(
     val draggableState = AnchoredDraggableState(
         initialValue = initialValue,
         positionalThreshold = { totalDistance -> totalDistance * 0.5f },
-        velocityThreshold = { 300f },  // Καθορίζει την ταχύτητα για το σύρσιμο
-        snapAnimationSpec = tween(300),  // Η κινούμενη εικόνα
-        decayAnimationSpec = exponentialDecay(0.1f, 1f),  // Decay animation
+        velocityThreshold = { 50.dpToPx.toFloat() },  // Καθορίζει την ταχύτητα για το σύρσιμο
+        snapAnimationSpec = tween(),  // Η κινούμενη εικόνα
+        decayAnimationSpec = SplineBasedFloatDecayAnimationSpec(Density(Resources.getSystem().displayMetrics.density)).generateDecayAnimationSpec(),  // Decay animation
         confirmValueChange = confirmValueChange  // Λειτουργία που επιβεβαιώνει την αλλαγή της τιμής
     )
     val showSize = mutableFloatStateOf(0f)

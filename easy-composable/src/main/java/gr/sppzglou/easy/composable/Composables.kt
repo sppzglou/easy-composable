@@ -117,7 +117,7 @@ fun navBarSize(): Int {
     var h by rem(0)
     Box(
         Modifier
-            .onSizeChanged { h = it.height.toDp }
+            .onSizeChanged { h = it.height.toDp.toInt() }
             .navigationBarsPadding())
     return h
 }
@@ -127,7 +127,7 @@ fun statusBarSize(): Int {
     var h by rem(0)
     Box(
         Modifier
-            .onSizeChanged { h = it.height.toDp }
+            .onSizeChanged { h = it.height.toDp.toInt() }
             .statusBarsPadding())
     return h
 }
