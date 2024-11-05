@@ -2,6 +2,7 @@ package gr.sppzglou.easy.composable
 
 import androidx.compose.animation.SplineBasedFloatDecayAnimationSpec
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.generateDecayAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -53,7 +54,7 @@ enum class BottomSheetValues {
 
     val draggableSpaceFraction: Float
         get() = when (this) {
-            Hidden -> -0.3f
+            Hidden -> 0f
             HalfExpanded -> 0.5f
             Expanded -> 1f
         }
@@ -94,13 +95,15 @@ class BottomSheetStateV4(
     density: Density
 ) {
 
+
     val draggableState = AnchoredDraggableState(
         initialValue = initialValue,
-        positionalThreshold = { totalDistance -> totalDistance * 0.5f },
-        velocityThreshold = { 200.dpToPx.toFloat() },
-        snapAnimationSpec = tween(),  // Η κινούμενη εικόνα
+        snapAnimationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        positionalThreshold = { with(density) { 20.dp.toPx() } },
+        velocityThreshold = { with(density) { 200.dp.toPx() } },
         decayAnimationSpec = SplineBasedFloatDecayAnimationSpec(density).generateDecayAnimationSpec(),  // Decay animation
     )
+
     val showSize = mutableFloatStateOf(0f)
 
     val layoutHeight = mutableIntStateOf(0)
@@ -180,6 +183,7 @@ class BottomSheetStateV4(
     suspend fun hide() {
         animateTo(BottomSheetValues.Hidden)
     }
+
     fun requireOffset(): Float {
         val offset = try {
             draggableState.requireOffset()
@@ -287,54 +291,57 @@ fun BottomSheet(
         }
     }
     if (state.targetValue != BottomSheetValues.Hidden || state.isVisibleReal || state.sheetHeight.intValue == 0) {
-    Box(
-        modifier = Modifier
-            .alpha(alpha)
-            .fillMaxSize()
-            .background(scrim)
-            .applyIf(state.isVisible && scrimColor != Color.Unspecified) {
-                pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-                        if (state.isCancellable) {
-                            scope.launch {
-                                state.hide()
-                            }
-                        }
-                    })
-                }
-            }
-            .onSizeChanged {
-                state.layoutHeight.intValue = it.height
-            }
-            .offset(y = offset)
-            .anchoredDraggable(
-                state = state.draggableState,
-                orientation = Orientation.Vertical,
-                enabled = state.isCancellable
-            )
-            .nestedScroll(bottomSheetNestedScrollConnection)
-            .then(modifier)
-    ) {
         Box(
             modifier = Modifier
-                .Tap { }
-                .onSizeChanged {
-                    if (it.height > 0) state.sheetHeight.intValue = it.height
-                }
-                .heightIn(min = 20.dp)
-        ) {
-
-            if (state.isVisibleReal || state.sheetHeight.intValue == 0) {
-                if (scrimColor != Color.Unspecified) {
-                    BackPressHandler {
-                        if (state.isCancellable) state.hide()
+                .alpha(alpha)
+                .fillMaxSize()
+                .background(scrim)
+                .applyIf(state.isVisible && scrimColor != Color.Unspecified) {
+                    pointerInput(Unit) {
+                        detectTapGestures(onTap = {
+                            if (state.isCancellable) {
+                                scope.launch {
+                                    state.hide()
+                                }
+                            }
+                        })
                     }
                 }
-                content()
+                .onSizeChanged {
+                    state.layoutHeight.intValue = it.height
+                }
+                .offset(y = offset)
+                .anchoredDraggable(
+                    state = state.draggableState,
+                    orientation = Orientation.Vertical,
+                    enabled = state.isCancellable
+                )
+                .nestedScroll(bottomSheetNestedScrollConnection)
+                .then(modifier)
+        ) {
+            Box(
+                modifier = Modifier
+                    .Tap { }
+                    .onSizeChanged {
+                        if (it.height > 0) state.sheetHeight.intValue = it.height
+                    }
+                    .heightIn(min = 50.dp)
+            ) {
+
+                if (state.isVisibleReal || state.sheetHeight.intValue == 0) {
+                    if (scrimColor != Color.Unspecified) {
+                        BackPressHandler {
+                            if (state.isCancellable) state.hide()
+                        }
+                    }
+                    content()
+                }
             }
         }
     }
-    }
+//    ModalBottomSheet(onDismissRequest = { /*TODO*/ }) {
+//
+//    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

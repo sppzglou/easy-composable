@@ -62,8 +62,8 @@ class MainActivity : ComponentActivity() {
                     Launch {
                         delay(2000)
                         list = 0..20
-                        delay(5000)
-                        list = 0..0
+//                        delay(5000)
+//                        list = 0..0
                     }
 
                     Column {
