@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +41,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -55,7 +53,7 @@ enum class BottomSheetValues {
 
     val draggableSpaceFraction: Float
         get() = when (this) {
-            Hidden -> 0f
+            Hidden -> -0.3f
             HalfExpanded -> 0.5f
             Expanded -> 1f
         }
@@ -182,18 +180,13 @@ class BottomSheetStateV4(
     suspend fun hide() {
         animateTo(BottomSheetValues.Hidden)
     }
-
-    private var offset = 0f
     fun requireOffset(): Float {
-        println(isVisibleReal)
-        offset = try {
+        val offset = try {
             draggableState.requireOffset()
         } catch (_: Exception) {
             0f
         }
         showSize.floatValue = layoutHeight.intValue - offset
-        println(isVisible)
-        println(isVisibleReal)
         return offset
     }
 
@@ -268,16 +261,17 @@ fun BottomSheet(
     )
 
     LaunchedEffect(state.layoutHeight.intValue, state.sheetHeight.intValue) {
+        println(state.sheetHeight.intValue)
         if (state.layoutHeight.intValue > 0 && state.sheetHeight.intValue > 0) {
             alpha = if (state.sheetHeight.intValue == 0) 0f else 1f
 
             // Αποθήκευση της τρέχουσας θέσης πριν την ενημέρωση των anchors
-            val currentOffset = state.requireOffset()
-            val doReset = state.showSize.floatValue > 0
+            //val currentOffset = state.requireOffset()
+            //val doReset = state.showSize.floatValue > 0
             // Ενημέρωση των anchors
             state.updateAnchors()
 
-            if (doReset) {
+            /*if (doReset) {
                 // Υπολογισμός των offset τιμών για κάθε κατάσταση
                 val expandedOffset =
                     state.layoutHeight.intValue * BottomSheetValues.Expanded.draggableSpaceFraction
@@ -289,10 +283,10 @@ fun BottomSheet(
                     state.draggableState.animateTo(BottomSheetValues.Expanded)
                 else if (currentOffset >= halfExpandedOffset)
                     state.draggableState.animateTo(BottomSheetValues.HalfExpanded)
-            }
+            }*/
         }
     }
-    //if (state.targetValue != BottomSheetValues.Hidden || state.isVisibleReal || state.sheetHeight.intValue == 0) {
+    if (state.targetValue != BottomSheetValues.Hidden || state.isVisibleReal || state.sheetHeight.intValue == 0) {
     Box(
         modifier = Modifier
             .alpha(alpha)
@@ -323,13 +317,13 @@ fun BottomSheet(
     ) {
         Box(
             modifier = Modifier
-                .wrapContentSize()
                 .Tap { }
                 .onSizeChanged {
-                    state.sheetHeight.intValue = it.height
+                    if (it.height > 0) state.sheetHeight.intValue = it.height
                 }
-                .heightIn(state.sheetHeight.intValue.toDp.dp, Dp.Infinity)
+                .heightIn(min = 20.dp)
         ) {
+
             if (state.isVisibleReal || state.sheetHeight.intValue == 0) {
                 if (scrimColor != Color.Unspecified) {
                     BackPressHandler {
@@ -340,7 +334,7 @@ fun BottomSheet(
             }
         }
     }
-    //}
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

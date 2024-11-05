@@ -14,7 +14,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import gr.sppzglou.easy.composable.BottomSheet
 import gr.sppzglou.easy.composable.BottomSheetStateV4
 import gr.sppzglou.easy.composable.BottomSheetValues
@@ -22,6 +24,7 @@ import gr.sppzglou.easy.composable.Launch
 import gr.sppzglou.easy.composable.SpacerV
 import gr.sppzglou.easy.composable.rem
 import gr.sppzglou.easy.composable.rememberBottomSheetState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -44,7 +47,6 @@ class MainActivity : ComponentActivity() {
                             state.show()
                         }
                     }) {
-
                         Text("${state.isVisible} ${state.isVisibleReal}")
                     }
                 }
@@ -58,12 +60,19 @@ class MainActivity : ComponentActivity() {
 //                    }
 
                     Launch {
-                        //delay(2000)
+                        delay(2000)
                         list = 0..20
+                        delay(5000)
+                        list = 0..0
                     }
 
                     Column {
-                        //Text("SKATA!!", Modifier.fillMaxWidth(), fontSize = 30.sp, color = Color.White)
+                        Text(
+                            "SKATA!!",
+                            Modifier.fillMaxWidth(),
+                            fontSize = 30.sp,
+                            color = Color.White
+                        )
                         SpacerV(190.dp)
                         list.forEach {
                             Text("$it", Modifier.fillMaxWidth())
