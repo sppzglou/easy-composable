@@ -22,7 +22,6 @@ import gr.sppzglou.easy.composable.Launch
 import gr.sppzglou.easy.composable.SheetValues
 import gr.sppzglou.easy.composable.rem
 import gr.sppzglou.easy.composable.rememberBottomSheetState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -32,7 +31,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val state: BottomSheetStateV4 =
-                rememberBottomSheetState(SheetValues.Hidden, skipHalfExpanded = false)
+                rememberBottomSheetState(
+                    SheetValues.Hidden,
+                    skipHalfExpanded = true,
+                    isAlwaysRunContent = false
+                )
             val scope = rememberCoroutineScope()
 
             Box(Modifier.fillMaxSize()) {
@@ -51,7 +54,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 BottomSheet(state) {
-                    var list by rem(0..0)
+                    var list by rem(0..50)
 //                    LazyColumn {
 //                        items(100) {
 //                            Text("$it", Modifier.fillMaxWidth())
@@ -59,8 +62,8 @@ class MainActivity : ComponentActivity() {
 //                    }
 
                     Launch {
-                        delay(2000)
-                        list = 0..20
+//                        delay(2000)
+//                        list = 0..20
 //                        delay(5000)
 //                        list = 0..0
                     }

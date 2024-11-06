@@ -3,7 +3,9 @@ package gr.sppzglou.easy.composable
 import androidx.compose.animation.SplineBasedFloatDecayAnimationSpec
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.generateDecayAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -25,7 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
@@ -42,9 +44,15 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+
+val sheetAnimation1: AnimationSpec<Float> =
+    tween(durationMillis = 300, easing = FastOutSlowInEasing)
+val sheetAnimation2: FiniteAnimationSpec<IntSize> =
+    tween(durationMillis = 300, easing = FastOutSlowInEasing)
 
 enum class SheetValues {
     Hidden,
@@ -64,6 +72,7 @@ fun rememberBottomSheetState(
     initialValue: SheetValues = SheetValues.Hidden,
     skipHalfExpanded: Boolean = false,
     isCancellable: Boolean = true,
+    isAlwaysRunContent: Boolean = false,
     density: Density = LocalDensity.current
 ): BottomSheetStateV4 {
     return key(initialValue) {
@@ -72,6 +81,7 @@ fun rememberBottomSheetState(
             saver = BottomSheetStateV4.Saver(
                 isCancellable = isCancellable,
                 skipHalfExpanded = skipHalfExpanded,
+                isAlwaysRunContent = isAlwaysRunContent,
                 density = density
             )
         ) {
@@ -79,11 +89,18 @@ fun rememberBottomSheetState(
                 initialValue = initialValue,
                 skipHalfExpanded = skipHalfExpanded,
                 isCancellable = isCancellable,
+                isAlwaysRunContent = isAlwaysRunContent,
                 density = density
             )
         }
     }
 }
+
+data class LayoutSizes(
+    var displayedSheetSize: Int = 0,
+    var containerSize: Int = 0,
+    var sheetSize: Int = 0
+)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Stable
@@ -91,19 +108,18 @@ class BottomSheetStateV4(
     initialValue: SheetValues,
     val skipHalfExpanded: Boolean,
     val isCancellable: Boolean,
+    val isAlwaysRunContent: Boolean,
     density: Density
 ) {
+    val sizes = mutableStateOf(LayoutSizes())
+    
     val draggableState = AnchoredDraggableState(
         initialValue = initialValue,
-        snapAnimationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        snapAnimationSpec = sheetAnimation1,
         positionalThreshold = { totalDistance -> totalDistance * 0.5f },
         velocityThreshold = { 50.dpToPx.toFloat() },
         decayAnimationSpec = SplineBasedFloatDecayAnimationSpec(density).generateDecayAnimationSpec()
     )
-
-    val displayedSheetSize = mutableIntStateOf(0)
-    val layoutSize = mutableIntStateOf(0)
-    val sheetSize = mutableIntStateOf(0)
 
     val currentValue: SheetValues
         get() = draggableState.currentValue
@@ -115,7 +131,7 @@ class BottomSheetStateV4(
         get() = currentValue != SheetValues.Hidden
 
     val isVisibleReal: Boolean
-        get() = displayedSheetSize.intValue > 0
+        get() = sizes.value.displayedSheetSize > 0
 
     val isExpanded: Boolean
         get() = currentValue == SheetValues.Expanded
@@ -157,14 +173,14 @@ class BottomSheetStateV4(
         } catch (_: Exception) {
             0f
         }
-        displayedSheetSize.intValue = sheetSize.intValue - offset.toInt()
+        sizes.value.displayedSheetSize = sizes.value.sheetSize - offset.toInt()
         return offset
     }
 
     fun updateAnchors() {
         fun calcDragEndPoint(sheetValue: SheetValues): Float {
             val dragPoint =
-                sheetSize.intValue - (layoutSize.intValue * sheetValue.draggableSpaceFraction)
+                sizes.value.sheetSize - (sizes.value.containerSize * sheetValue.draggableSpaceFraction)
             return dragPoint.coerceAtLeast(0f)
         }
 
@@ -185,6 +201,7 @@ class BottomSheetStateV4(
         fun Saver(
             isCancellable: Boolean,
             skipHalfExpanded: Boolean,
+            isAlwaysRunContent: Boolean,
             density: Density
         ): Saver<BottomSheetStateV4, SheetValues> =
             Saver(
@@ -194,6 +211,7 @@ class BottomSheetStateV4(
                         initialValue = it,
                         skipHalfExpanded = skipHalfExpanded,
                         isCancellable = isCancellable,
+                        isAlwaysRunContent = isAlwaysRunContent,
                         density = density
                     )
                 }
@@ -219,7 +237,7 @@ fun BottomSheet(
     }
 
     val scrim by animateColorAsState(
-        if (state.targetValue != SheetValues.Hidden && state.sheetSize.intValue > 0)
+        if (state.targetValue != SheetValues.Hidden && state.sizes.value.sheetSize > 0)
             scrimColor else Color.Transparent,
         tween(), label = ""
     )
@@ -227,7 +245,7 @@ fun BottomSheet(
     Box(
         Modifier
             .onSizeChanged {
-                state.layoutSize.intValue = it.height
+                state.sizes.value.containerSize = it.height
             }
             .fillMaxSize()
     ) {
@@ -247,7 +265,7 @@ fun BottomSheet(
                     }
                 }
         )
-        if (state.layoutSize.intValue != 0) {
+        if (state.sizes.value.containerSize != 0) {
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -261,21 +279,27 @@ fun BottomSheet(
                     }
                     .anchoredDraggable(state.draggableState, Orientation.Vertical)
                     .onSizeChanged {
-                        state.sheetSize.intValue = it.height
-                        state.updateAnchors()
+                        if (it.height > 50.dpToPx) {
+                            state.sizes.value.sheetSize = it.height
+                            state.updateAnchors()
+                        }
                     }
                     .then(modifier)
                     .Tap { }
                     .heightIn(min = 50.dp)
-                    .animateContentSize(),
+                    .animateContentSize(sheetAnimation2),
                 color = Color.Transparent
             ) {
-                if (state.isVisibleReal || state.sheetSize.intValue == 0) {
+                if (state.isVisibleReal || state.sizes.value.sheetSize == 0) {
                     if (scrimColor != Color.Unspecified) {
                         BackPressHandler {
                             if (state.isCancellable) state.hide()
                         }
                     }
+                }
+                if (state.isAlwaysRunContent) {
+                    content()
+                } else if (state.isVisibleReal || state.sizes.value.sheetSize == 0) {
                     content()
                 }
             }
