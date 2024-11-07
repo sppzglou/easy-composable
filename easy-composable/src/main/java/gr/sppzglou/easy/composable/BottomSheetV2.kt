@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 val LocalAppBottomSheet = staticCompositionLocalOf { BottomSheet() }
 
 data class Sheet(
-    val state: BottomSheetStateV4,
+    val state: BottomSheetStateV3,
     val modifier: Modifier,
     val scrimColor: Color,
     val content: (@Composable () -> Unit)
@@ -49,7 +49,7 @@ data class BottomSheet(
 @Composable
 fun BottomSheet(
     modifier: Modifier = Modifier,
-    state: BottomSheetStateV4,
+    state: BottomSheetStateV3,
     scrimColor: Color = ModalBottomSheetDefaults.scrimColor,
     sheetContent: @Composable () -> Unit
 ) {

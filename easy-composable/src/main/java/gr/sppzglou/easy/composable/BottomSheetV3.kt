@@ -1,8 +1,11 @@
 package gr.sppzglou.easy.composable
 
-import android.content.res.Resources
 import androidx.compose.animation.SplineBasedFloatDecayAnimationSpec
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.generateDecayAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -15,16 +18,15 @@ import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
@@ -38,217 +40,22 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-@Composable
-fun rememberBottomSheetState(
-    initialValue: BottomSheetValueV3 = BottomSheetValueV3.Hidden,
-    skipHalfExpanded: Boolean = false,
-    isCancellable: Boolean = true,
-    confirmValueChange: (BottomSheetValueV3) -> Boolean = { true },
-): BottomSheetStateV3 {
-    return key(initialValue) {
-        rememberSaveable(
-            initialValue, confirmValueChange,
-            saver = BottomSheetStateV3.Saver(
-                isCancellable = isCancellable,
-                skipHalfExpanded = skipHalfExpanded,
-                confirmValueChange = confirmValueChange
-            )
-        ) {
-            BottomSheetStateV3(
-                initialValue = initialValue,
-                skipHalfExpanded = skipHalfExpanded,
-                isCancellable = isCancellable,
-                confirmValueChange = confirmValueChange
-            )
-        }
-    }
-}
+val sheetAnimation1: AnimationSpec<Float> =
+    tween(durationMillis = 300, easing = FastOutSlowInEasing)
+val sheetAnimation2: FiniteAnimationSpec<IntSize> =
+    tween(durationMillis = 300, easing = FastOutSlowInEasing)
 
-@OptIn(ExperimentalFoundationApi::class)
-@Stable
-class BottomSheetStateV3(
-    initialValue: BottomSheetValueV3,
-    val skipHalfExpanded: Boolean,
-    val isCancellable: Boolean,
-    private val confirmValueChange: (BottomSheetValueV3) -> Boolean = { isCancellable }
-) {
-
-    val draggableState = AnchoredDraggableState(
-        initialValue = initialValue,
-        positionalThreshold = { totalDistance -> totalDistance * 0.5f },
-        velocityThreshold = { 50.dpToPx.toFloat() },  // Καθορίζει την ταχύτητα για το σύρσιμο
-        snapAnimationSpec = tween(),  // Η κινούμενη εικόνα
-        decayAnimationSpec = SplineBasedFloatDecayAnimationSpec(Density(Resources.getSystem().displayMetrics.density)).generateDecayAnimationSpec(),  // Decay animation
-        confirmValueChange = confirmValueChange  // Λειτουργία που επιβεβαιώνει την αλλαγή της τιμής
-    )
-    val showSize = mutableFloatStateOf(0f)
-
-    val layoutHeight = mutableIntStateOf(0)
-    val sheetHeight = mutableIntStateOf(0)
-
-    /**
-     * The current value of the [BottomSheetStateV3].
-     */
-    val currentValue: BottomSheetValueV3
-        get() = draggableState.currentValue
-
-    val targetValue: BottomSheetValueV3
-        get() = draggableState.targetValue
-
-    /**
-     * Whether the bottom sheet is visible.
-     */
-    val isVisible: Boolean
-        get() = currentValue != BottomSheetValueV3.Hidden
-
-    val isVisibleReal: Boolean
-        get() = showSize.floatValue > 0
-
-    /**
-     * Whether the bottom sheet is expanded.
-     */
-    val isExpanded: Boolean
-        get() = currentValue == BottomSheetValueV3.Expanded
-
-    /**
-     * Whether the bottom sheet is half expanded.
-     */
-    val isHalfExpanded: Boolean
-        get() = currentValue == BottomSheetValueV3.HalfExpanded
-
-    /**
-     * Whether the bottom sheet is hidden.
-     */
-    val isHidden: Boolean
-        get() = currentValue == BottomSheetValueV3.Hidden
-
-    private val hasHalfExpandedState: Boolean
-        get() = draggableState.anchors.hasAnchorFor(BottomSheetValueV3.HalfExpanded)
-
-    /**
-     * Show the bottom sheet with animation and suspend until it's shown.
-     * If the sheet is taller than 50% of the parent's height, the bottom sheet will be half expanded.
-     * Otherwise, it will be fully expanded.
-     */
-    suspend fun show() {
-        val targetValue = if (skipHalfExpanded) {
-            BottomSheetValueV3.Expanded
-        } else {
-            if (hasHalfExpandedState) BottomSheetValueV3.HalfExpanded
-            else BottomSheetValueV3.Expanded
-        }
-        animateTo(targetValue)
-    }
-
-    /**
-     * Expand the bottom sheet with an animation and suspend until the animation finishes or is cancelled.
-     */
-    suspend fun expand() {
-        if (draggableState.anchors.hasAnchorFor(BottomSheetValueV3.Expanded)) {
-            animateTo(BottomSheetValueV3.Expanded)
-        }
-    }
-
-    /**
-     * Half expand the bottom sheet with an animation and suspend until the animation finishes or is cancelled.
-     */
-    suspend fun halfExpand() {
-        if (draggableState.anchors.hasAnchorFor(BottomSheetValueV3.HalfExpanded)) {
-            animateTo(BottomSheetValueV3.HalfExpanded)
-        }
-    }
-
-    /**
-     * Hide the bottom sheet with an animation and suspend until the animation finishes or is cancelled.
-     */
-    suspend fun hide() {
-        animateTo(BottomSheetValueV3.Hidden)
-    }
-
-    fun requireOffset(): Int {
-        val offset = try {
-            draggableState.requireOffset()
-        } catch (_: Exception) {
-            0f
-        }
-        showSize.floatValue = layoutHeight.intValue - offset
-        return offset.roundToInt()
-    }
-
-    private fun calcDragEndPoint(state: BottomSheetValueV3): Float {
-        val fractionatedMaxDragEndPoint = layoutHeight.intValue * state.draggableSpaceFraction
-        return layoutHeight.intValue.toFloat() - min(
-            fractionatedMaxDragEndPoint,
-            sheetHeight.intValue.toFloat()
-        )
-    }
-
-    fun updateAnchors() {
-        val newAnchors = DraggableAnchors {
-            BottomSheetValueV3.Hidden at calcDragEndPoint(BottomSheetValueV3.Hidden)
-            if (!skipHalfExpanded) {
-                BottomSheetValueV3.HalfExpanded at calcDragEndPoint(BottomSheetValueV3.HalfExpanded)
-            }
-            BottomSheetValueV3.Expanded at calcDragEndPoint(BottomSheetValueV3.Expanded)
-        }
-        draggableState.updateAnchors(newAnchors)
-    }
-
-//    fun updateAnchors() {
-//        val newAnchors = DraggableAnchors {
-//            // Anchor για το "Hidden" εκτός της οθόνης
-//            BottomSheetValueV3.Hidden at (layoutHeight.intValue + sheetHeight.intValue).toFloat()
-//
-//            // Anchor για το "HalfExpanded" αν δεν παρακάμπτεται
-//            if (!skipHalfExpanded) {
-//                BottomSheetValueV3.HalfExpanded at (layoutHeight.intValue * 0.5f)
-//            }
-//
-//            // Anchor για το "Expanded" στην κορυφή του bottom sheet
-//            BottomSheetValueV3.Expanded at (layoutHeight.intValue - sheetHeight.intValue.toFloat())
-//        }
-//
-//        // Ενημέρωση των anchors
-//        draggableState.updateAnchors(newAnchors)
-//    }
-
-    private suspend fun animateTo(
-        targetValue: BottomSheetValueV3,
-        velocity: Float = draggableState.lastVelocity
-    ) = draggableState.animateTo(targetValue)
-
-    companion object {
-        /**
-         * The default [Saver] implementation for [BottomSheetStateV3].
-         */
-        fun Saver(
-            isCancellable: Boolean,
-            skipHalfExpanded: Boolean,
-            confirmValueChange: (BottomSheetValueV3) -> Boolean
-        ): Saver<BottomSheetStateV3, BottomSheetValueV3> =
-            Saver(
-                save = { it.currentValue },
-                restore = {
-                    BottomSheetStateV3(
-                        initialValue = it,
-                        skipHalfExpanded = skipHalfExpanded,
-                        isCancellable = isCancellable,
-                        confirmValueChange = confirmValueChange
-                    )
-                }
-            )
-    }
-}
-
-enum class BottomSheetValueV3 {
+enum class SheetValues {
     Hidden,
     HalfExpanded,
     Expanded;
@@ -259,6 +66,179 @@ enum class BottomSheetValueV3 {
             HalfExpanded -> 0.5f
             Expanded -> 1f
         }
+}
+
+data class LayoutSizes(
+    var displayedSheetSize: Int = 0,
+    var containerSize: Int = 0,
+    var sheetSize: Int = 0,
+    var progress: Float = 0f
+)
+
+@Composable
+fun rememberBottomSheetState(
+    initialValue: SheetValues = SheetValues.Hidden,
+    skipHalfExpanded: Boolean = false,
+    isCancellable: Boolean = true,
+    density: Density = LocalDensity.current
+): BottomSheetStateV3 {
+    return key(initialValue) {
+        rememberSaveable(
+            initialValue,
+            saver = BottomSheetStateV3.Saver(
+                isCancellable = isCancellable,
+                skipHalfExpanded = skipHalfExpanded,
+                density = density
+            )
+        ) {
+            BottomSheetStateV3(
+                initialValue = initialValue,
+                skipHalfExpanded = skipHalfExpanded,
+                isCancellable = isCancellable,
+                density = density
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Stable
+class BottomSheetStateV3(
+    initialValue: SheetValues,
+    val skipHalfExpanded: Boolean,
+    val isCancellable: Boolean,
+    density: Density
+) {
+    val sizes = mutableStateOf(LayoutSizes())
+    fun setContainerSize(value: Int) {
+        sizes.value.containerSize = value
+    }
+
+    fun setSheetSize(value: Int) {
+//        sizes.value.sheetSize = value
+        sheetSize.intValue = value
+    }
+
+    val draggableState = AnchoredDraggableState(
+        initialValue = initialValue,
+        snapAnimationSpec = sheetAnimation1,
+        positionalThreshold = { totalDistance -> totalDistance * 0.5f },
+        velocityThreshold = { 50.dpToPx.toFloat() },
+        decayAnimationSpec = SplineBasedFloatDecayAnimationSpec(density).generateDecayAnimationSpec()
+    )
+
+    val sheetSize = mutableIntStateOf(0)
+
+    /**
+     * The current value of the [BottomSheetStateV3].
+     */
+    val currentValue: SheetValues
+        get() = draggableState.currentValue
+
+    val targetValue: SheetValues
+        get() = draggableState.targetValue
+
+    val isVisible: Boolean
+        get() = currentValue != SheetValues.Hidden
+
+    val isVisibleReal: Boolean
+        get() = sizes.value.displayedSheetSize > 0
+
+    val isExpanded: Boolean
+        get() = currentValue == SheetValues.Expanded
+
+    val isHalfExpanded: Boolean
+        get() = currentValue == SheetValues.HalfExpanded
+
+    val isHidden: Boolean
+        get() = currentValue == SheetValues.Hidden
+
+    private val hasHalfExpandedState: Boolean
+        get() = draggableState.anchors.hasAnchorFor(SheetValues.HalfExpanded)
+
+    suspend fun show() {
+        val targetValue = if (skipHalfExpanded) {
+            SheetValues.Expanded
+        } else {
+            if (hasHalfExpandedState) SheetValues.HalfExpanded
+            else SheetValues.Expanded
+        }
+        animateTo(targetValue)
+    }
+
+    suspend fun expand() {
+        if (draggableState.anchors.hasAnchorFor(SheetValues.Expanded)) {
+            animateTo(SheetValues.Expanded)
+        }
+    }
+
+    suspend fun halfExpand() {
+        if (draggableState.anchors.hasAnchorFor(SheetValues.HalfExpanded)) {
+            animateTo(SheetValues.HalfExpanded)
+        }
+    }
+
+    suspend fun hide() {
+        animateTo(SheetValues.Hidden)
+    }
+
+    fun requireOffset(): Int {
+        val offset = try {
+            draggableState.requireOffset()
+        } catch (_: Exception) {
+            0f
+        }
+        with(sizes.value) {
+            displayedSheetSize = (containerSize - offset).toInt()
+            progress = if (sheetSize > 0) displayedSheetSize.toFloat() / sheetSize.toFloat()
+            else 0f
+        }
+        return offset.roundToInt()
+    }
+
+    private fun calcDragEndPoint(state: SheetValues): Float {
+        with(sizes.value) {
+            val fractionatedMaxDragEndPoint =
+                containerSize * state.draggableSpaceFraction
+            return containerSize.toFloat() - min(
+                fractionatedMaxDragEndPoint,
+                this@BottomSheetStateV3.sheetSize.intValue.toFloat()
+            )
+        }
+    }
+
+    fun updateAnchors() {
+        val newAnchors = DraggableAnchors {
+            SheetValues.Hidden at calcDragEndPoint(SheetValues.Hidden)
+            if (!skipHalfExpanded) {
+                SheetValues.HalfExpanded at calcDragEndPoint(SheetValues.HalfExpanded)
+            }
+            SheetValues.Expanded at calcDragEndPoint(SheetValues.Expanded)
+        }
+        draggableState.updateAnchors(newAnchors, draggableState.targetValue)
+    }
+
+    private suspend fun animateTo(targetValue: SheetValues) =
+        draggableState.animateTo(targetValue)
+
+    companion object {
+        fun Saver(
+            isCancellable: Boolean,
+            skipHalfExpanded: Boolean,
+            density: Density
+        ): Saver<BottomSheetStateV3, SheetValues> =
+            Saver(
+                save = { it.currentValue },
+                restore = {
+                    BottomSheetStateV3(
+                        initialValue = it,
+                        skipHalfExpanded = skipHalfExpanded,
+                        isCancellable = isCancellable,
+                        density = density
+                    )
+                }
+            )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -272,26 +252,28 @@ fun BottomSheet(
     scrimColor: Color = Color.Black.copy(0.5f),
     content: @Composable () -> Unit
 ) {
+    val sheetSize by remember(state.sheetSize.intValue) {
+        mutableIntStateOf(state.sheetSize.intValue)
+    }
     val scope = rememberCoroutineScope()
-    val bottomSheetNestedScrollConnection = remember(state.draggableState) {
-        consumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
-            state = state.draggableState
-        )
+    val nestedScrollConnection = remember(state) {
+        nestedScrollConnection(state)
     }
     val scrim by animateColorAsState(
-        if (state.targetValue != BottomSheetValueV3.Hidden && state.sheetHeight.intValue > 0)
+        if (state.targetValue != SheetValues.Hidden && sheetSize > 0)
             scrimColor else Color.Transparent,
-        tween()
+        tween(), label = ""
     )
 
-    LaunchedEffect(state.layoutHeight.intValue, state.sheetHeight.intValue) {
-        if (state.layoutHeight.intValue > 0 && state.sheetHeight.intValue > 0) {
-            state.updateAnchors()
-        }
-    }
-    if (state.targetValue != BottomSheetValueV3.Hidden || state.isVisibleReal || state.sheetHeight.intValue == 0) {
+    Box(
+        Modifier
+            .onSizeChanged {
+                state.setContainerSize(it.height)
+            }
+            .fillMaxSize()
+    ) {
         Box(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
                 .background(scrim)
                 .applyIf(state.isVisible && scrimColor != Color.Unspecified) {
@@ -305,44 +287,45 @@ fun BottomSheet(
                         })
                     }
                 }
-                .onSizeChanged {
-                    state.layoutHeight.intValue = it.height
-                }
-                .offset {
-                    val yOffset = state.requireOffset()
-                    IntOffset(x = 0, y = yOffset)
-                }
-                .anchoredDraggable(
-                    state = state.draggableState,
-                    orientation = Orientation.Vertical,
-                    enabled = state.isCancellable
-                )
-                .nestedScroll(
-                    if (state.isCancellable) bottomSheetNestedScrollConnection
-                    else {
-                        object : NestedScrollConnection {
+        )
+        if (state.targetValue != SheetValues.Hidden || state.isVisibleReal || sheetSize == 0) {
 
-                        }
-                    }
-                )
-                .then(modifier)
-        ) {
             Box(
                 modifier = Modifier
-                    .alpha(if (state.sheetHeight.intValue == 0) 0f else 1f)
-                    .wrapContentSize()
-                    .Tap { }
-                    .onSizeChanged {
-                        state.sheetHeight.intValue = it.height
+                    .fillMaxSize()
+                    .offset {
+                        val yOffset = state.requireOffset()
+                        IntOffset(x = 0, y = yOffset)
                     }
+                    .anchoredDraggable(
+                        state = state.draggableState,
+                        orientation = Orientation.Vertical,
+                        enabled = state.isCancellable
+                    )
+                    .nestedScroll(nestedScrollConnection)
+                    .then(modifier)
             ) {
-                if (state.isVisibleReal || state.sheetHeight.intValue == 0) {
-                    if (scrimColor != Color.Unspecified) {
-                        BackPressHandler {
-                            if (state.isCancellable) state.hide()
+                Box(
+                    modifier = Modifier
+                        .alpha(if (sheetSize == 0) 0f else 1f)
+                        .Tap { }
+                        .onSizeChanged {
+                            state.setSheetSize(it.height)
+                            if (sheetSize > 0) {
+                                state.updateAnchors()
+                            }
                         }
+                        .animateContentSize(sheetAnimation2)
+                        .heightIn(min = 50.dp)
+                ) {
+                    if (state.isVisibleReal || sheetSize == 0) {
+                        if (scrimColor != Color.Unspecified) {
+                            BackPressHandler {
+                                if (state.isCancellable) state.hide()
+                            }
+                        }
+                        content()
                     }
-                    content()
                 }
             }
         }
@@ -350,56 +333,61 @@ fun BottomSheet(
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-private fun consumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
-    state: AnchoredDraggableState<BottomSheetValueV3>
-): NestedScrollConnection = object : NestedScrollConnection {
+internal fun nestedScrollConnection(
+    state: BottomSheetStateV3
+): NestedScrollConnection =
+    object : NestedScrollConnection {
+        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
+            if (state.isCancellable) {
+                val delta = available.offsetToFloat()
+                if (delta < 0 && source == NestedScrollSource.UserInput) {
+                    state.draggableState.dispatchRawDelta(delta).toOffset()
+                } else {
+                    Offset.Zero
+                }
+            } else {
+                super.onPreScroll(available, source)
+            }
 
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        val delta = available.offsetToFloat()
-        return if (delta < 0 && source == NestedScrollSource.UserInput) {
-            state.dispatchRawDelta(delta).toOffset()
-        } else {
-            Offset.Zero
-        }
+
+        override fun onPostScroll(
+            consumed: Offset,
+            available: Offset,
+            source: NestedScrollSource
+        ): Offset = if (state.isCancellable) {
+            if (source == NestedScrollSource.UserInput) {
+                state.draggableState.dispatchRawDelta(available.offsetToFloat()).toOffset()
+            } else {
+                Offset.Zero
+            }
+        } else super.onPostScroll(consumed, available, source)
+
+        override suspend fun onPreFling(available: Velocity): Velocity = if (state.isCancellable) {
+            val toFling = available.toFloat()
+            val currentOffset = state.requireOffset()
+            val minAnchor = state.draggableState.anchors.minAnchor()
+
+            if (toFling < 0 && currentOffset > minAnchor) {
+                state.draggableState.settle(toFling)
+                available
+            } else {
+                Velocity.Zero
+            }
+        } else super.onPreFling(available)
+
+        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+            if (state.isCancellable) {
+                val onFling = available.toFloat()
+                state.draggableState.settle(onFling)
+                available
+            } else super.onPostFling(consumed, available)
+
+        private fun Float.toOffset(): Offset = Offset(
+            x = 0f,
+            y = this
+        )
+
+        private fun Velocity.toFloat() = y
+        private fun Offset.offsetToFloat(): Float = y
+
     }
-
-    override fun onPostScroll(
-        consumed: Offset,
-        available: Offset,
-        source: NestedScrollSource
-    ): Offset {
-        val delta = available.offsetToFloat()
-        return if (source == NestedScrollSource.UserInput) {
-            state.dispatchRawDelta(delta).toOffset()
-        } else {
-            Offset.Zero
-        }
-    }
-
-    override suspend fun onPreFling(available: Velocity): Velocity {
-        val toFling = available.velocityToFloat()
-        val currentOffset = state.requireOffset()
-        return if (toFling < 0 && currentOffset > state.anchors.minAnchor()) {
-            state.settle(toFling)
-            available
-        } else {
-            Velocity.Zero
-        }
-    }
-
-    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-        val toFling = available.velocityToFloat()
-        state.settle(toFling)
-        return available
-    }
-
-
-    private fun Offset.offsetToFloat(): Float = y
-
-    private fun Float.toOffset(): Offset = Offset(
-        x = 0f,
-        y = this
-    )
-
-    private fun Velocity.velocityToFloat() = y
-}

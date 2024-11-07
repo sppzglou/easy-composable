@@ -3,9 +3,6 @@ package gr.sppzglou.easy.composable
 import androidx.compose.animation.SplineBasedFloatDecayAnimationSpec
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.generateDecayAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -44,28 +41,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-
-val sheetAnimation1: AnimationSpec<Float> =
-    tween(durationMillis = 300, easing = FastOutSlowInEasing)
-val sheetAnimation2: FiniteAnimationSpec<IntSize> =
-    tween(durationMillis = 300, easing = FastOutSlowInEasing)
-
-enum class SheetValues {
-    Hidden,
-    HalfExpanded,
-    Expanded;
-
-    val draggableSpaceFraction: Float
-        get() = when (this) {
-            Hidden -> 0f
-            HalfExpanded -> 0.5f
-            Expanded -> 1f
-        }
-}
 
 @Composable
 fun rememberBottomSheetState(
@@ -95,13 +73,6 @@ fun rememberBottomSheetState(
         }
     }
 }
-
-data class LayoutSizes(
-    var displayedSheetSize: Int = 0,
-    var containerSize: Int = 0,
-    var sheetSize: Int = 0,
-    var progress: Float = 0f
-)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Stable

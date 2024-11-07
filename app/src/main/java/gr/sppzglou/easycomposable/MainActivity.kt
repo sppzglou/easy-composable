@@ -6,9 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.getValue
@@ -17,7 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import gr.sppzglou.easy.composable.BottomSheet
-import gr.sppzglou.easy.composable.BottomSheetStateV4
+import gr.sppzglou.easy.composable.BottomSheetStateV3
 import gr.sppzglou.easy.composable.Launch
 import gr.sppzglou.easy.composable.SheetValues
 import gr.sppzglou.easy.composable.rem
@@ -30,11 +33,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val state: BottomSheetStateV4 =
+            val state: BottomSheetStateV3 =
                 rememberBottomSheetState(
                     SheetValues.Hidden,
-                    skipHalfExpanded = true,
-                    isAlwaysRunContent = false
+                    skipHalfExpanded = false
                 )
             val scope = rememberCoroutineScope()
 
@@ -79,11 +81,14 @@ class MainActivity : ComponentActivity() {
                         list.forEach {
                             Text("$it", Modifier.fillMaxWidth())
                         }
-//                        LazyColumn {
-//                            items(100) {
-//                                Text("$it", Modifier.fillMaxWidth())
-//                            }
-//                        }
+                        LazyColumn {
+                            items(100) {
+                                Text("$it", Modifier.fillMaxWidth())
+                            }
+                            item {
+                                Spacer(Modifier.navigationBarsPadding())
+                            }
+                        }
                     }
                 }
             }
