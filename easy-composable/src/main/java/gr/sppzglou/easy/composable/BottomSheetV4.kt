@@ -99,7 +99,8 @@ fun rememberBottomSheetState(
 data class LayoutSizes(
     var displayedSheetSize: Int = 0,
     var containerSize: Int = 0,
-    var sheetSize: Int = 0
+    var sheetSize: Int = 0,
+    var progress: Float = 0f
 )
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -112,7 +113,7 @@ class BottomSheetStateV4(
     density: Density
 ) {
     val sizes = mutableStateOf(LayoutSizes())
-    
+
     val draggableState = AnchoredDraggableState(
         initialValue = initialValue,
         snapAnimationSpec = sheetAnimation1,
@@ -173,7 +174,11 @@ class BottomSheetStateV4(
         } catch (_: Exception) {
             0f
         }
-        sizes.value.displayedSheetSize = sizes.value.sheetSize - offset.toInt()
+        with(sizes.value) {
+            displayedSheetSize = sheetSize - offset.toInt()
+            progress = if (sheetSize > 0) displayedSheetSize.toFloat() / sheetSize.toFloat()
+            else 0f
+        }
         return offset
     }
 
@@ -277,7 +282,11 @@ fun BottomSheet(
                             .toInt()
                         IntOffset(x = 0, y = sheetOffsetY)
                     }
-                    .anchoredDraggable(state.draggableState, Orientation.Vertical)
+                    .anchoredDraggable(
+                        state.draggableState,
+                        Orientation.Vertical,
+                        state.isCancellable
+                    )
                     .onSizeChanged {
                         if (it.height > 50.dpToPx) {
                             state.sizes.value.sheetSize = it.height
