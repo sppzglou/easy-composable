@@ -18,6 +18,7 @@ import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,13 +43,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 val sheetAnimation1: AnimationSpec<Float> =
     tween(durationMillis = 300, easing = FastOutSlowInEasing)
@@ -182,7 +181,7 @@ class BottomSheetStateV3(
         animateTo(SheetValues.Hidden)
     }
 
-    fun requireOffset(): Int {
+    fun requireOffset(): Float {
         val offset = try {
             draggableState.requireOffset()
         } catch (_: Exception) {
@@ -193,7 +192,7 @@ class BottomSheetStateV3(
             progress = if (sheetSize > 0) displayedSheetSize.toFloat() / sheetSize.toFloat()
             else 0f
         }
-        return offset.roundToInt()
+        return offset
     }
 
     private fun calcDragEndPoint(state: SheetValues): Float {
@@ -252,6 +251,9 @@ fun BottomSheet(
     scrimColor: Color = Color.Black.copy(0.5f),
     content: @Composable () -> Unit
 ) {
+    val offset by remember(state.draggableState.offset) {
+        mutableStateOf(state.requireOffset().toDp.dp)
+    }
     val sheetSize by remember(state.sheetSize.intValue) {
         mutableIntStateOf(state.sheetSize.intValue)
     }
@@ -293,10 +295,7 @@ fun BottomSheet(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .offset {
-                        val yOffset = state.requireOffset()
-                        IntOffset(x = 0, y = yOffset)
-                    }
+                    .offset(y = offset)
                     .anchoredDraggable(
                         state = state.draggableState,
                         orientation = Orientation.Vertical,
@@ -316,6 +315,7 @@ fun BottomSheet(
                             }
                         }
                         .animateContentSize(sheetAnimation2)
+                        .fillMaxWidth()
                         .heightIn(min = 50.dp)
                 ) {
                     if (state.isVisibleReal || sheetSize == 0) {
