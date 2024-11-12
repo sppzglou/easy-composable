@@ -2,6 +2,8 @@ package gr.sppzglou.easy.composable
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.Uri
+import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
@@ -12,8 +14,16 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,8 +40,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,23 +53,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import java.lang.System.currentTimeMillis
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-@SuppressLint("ClickableViewAccessibility", "RestrictedApi")
+@SuppressLint("ClickableViewAccessibility", "RestrictedApi", "SetJavaScriptEnabled")
 @Composable
 fun CameraView(
     backBtn: @Composable () -> Unit,
@@ -70,8 +92,10 @@ fun CameraView(
     corners: Dp = 0.dp,
     color1: Color = Color.Black,
     color2: Color = Color.White,
-    specialBtn: (@Composable ((File?, kotlin.Exception?) -> Unit) -> Unit)? = null,
+    specialBtn: (@Composable ((File?, Exception?) -> Unit) -> Unit)? = null,
     perfix: String = "",
+    allowPhoto: Boolean = true,
+    allowVideo: Boolean = false,
     handler: (f: File?, e: Exception?) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -86,6 +110,18 @@ fun CameraView(
     var showPreviewCase by rem(0)
     val previewView = remember { PreviewView(context) }
     val imageCapture = remember { ImageCapture.Builder().build() }
+    val videoCapture = remember {
+        VideoCapture.withOutput(
+            Recorder.Builder()
+                .setQualitySelector(QualitySelector.from(Quality.LOWEST))
+                .build()
+        )
+    }
+    val currentRecording = rem<Recording?>(null)
+    var isRecording by rem(false)
+    var videoProgress by rem(0f)
+    val videoProgressAnim by animateFloatAsState(videoProgress, tween(100, easing = LinearEasing))
+    var isVideoFlow by rem(!allowPhoto)
     val cameraSelector = remember {
         CameraSelector.Builder()
             .requireLensFacing(lensFacing)
@@ -93,7 +129,16 @@ fun CameraView(
     }
     var file by rem<File?>(null)
 
-    fun handleImageCapture(f: File?, e: Exception?) {
+    LaunchedEffect(isRecording) {
+        val start = currentTimeMillis()
+        while (isRecording) {
+            videoProgress = (currentTimeMillis() - start) / 15000f
+            delay(100)
+        }
+        videoProgress = 0f
+    }
+
+    fun handleCapture(f: File?, e: Exception?) {
         if (f != null) {
             showPreviewCase = 0
             file = f
@@ -111,16 +156,17 @@ fun CameraView(
         Column(Modifier.fillMaxSize()) {
             if (!showPreview) {
                 LaunchedEffect(lensFacing) {
-                    val cameraProvider = context.getCameraProvider(::handleImageCapture)
+                    val cameraProvider = context.getCameraProvider(::handleCapture)
                     if (cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
                         cameraProvider.unbindAll()
                         camera = cameraProvider.bindToLifecycle(
                             lifecycle,
                             cameraSelector,
                             cameraView,
-                            imageCapture
+                            imageCapture,
+                            videoCapture
                         )
-                        cameraView.setSurfaceProvider(previewView.surfaceProvider)
+                        cameraView.surfaceProvider = previewView.surfaceProvider
                     }
                 }
                 Row(
@@ -250,7 +296,43 @@ fun CameraView(
                                 .padding(bottom = 20.dp)
                                 .padding(start = 10.dp), Arrangement.Bottom
                         ) {
-                            it.invoke(::handleImageCapture)
+                            it.invoke(::handleCapture)
+                        }
+                    }
+                    if (allowVideo && allowPhoto && !isRecording) {
+                        Column(
+                            Modifier
+                                .fillMaxSize()
+                                .navigationBarsPadding()
+                                .padding(bottom = 30.dp)
+                                .padding(end = 10.dp), Arrangement.Bottom, Alignment.End
+                        ) {
+                            Row(
+                                Modifier
+                                    .clip(CircleShape)
+                                    .Click(color2) {
+                                        isVideoFlow = !isVideoFlow
+                                    }) {
+                                GlideImg(
+                                    R.drawable.baseline_photo_camera_24,
+                                    Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(if (!isVideoFlow) color1 else Color.Transparent)
+                                        .padding(5.dp),
+                                    colorFilter = ColorFilter.tint(if (!isVideoFlow) color2 else color1)
+                                )
+                                SpacerH(20.dp)
+                                GlideImg(
+                                    R.drawable.baseline_videocam_24,
+                                    Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isVideoFlow) color1 else Color.Transparent)
+                                        .padding(5.dp),
+                                    colorFilter = ColorFilter.tint(if (isVideoFlow) color2 else color1)
+                                )
+                            }
                         }
                     }
                     Column(
@@ -261,15 +343,76 @@ fun CameraView(
                         Arrangement.Bottom,
                         Alignment.CenterHorizontally
                     ) {
-                        captureBtn {
-                            takePhoto(
-                                context = context,
-                                perfix = perfix,
-                                imageCapture = imageCapture,
-                                executor = Executors.newSingleThreadExecutor(),
-                                onImageCaptured = ::handleImageCapture
-                            )
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        fun stopVideoRecording() {
+                            currentRecording.value?.stop()
+                            currentRecording.value = null
+                            isRecording = false
+                        }
+
+                        LaunchedEffect(videoProgress) {
+                            if (videoProgress >= 1f) {
+                                stopVideoRecording()
+                            }
+                        }
+
+                        var size by rem(IntSize.Zero)
+                        Box(
+                            Modifier
+                                .size(
+                                    if (size == IntSize.Zero) Dp.Unspecified
+                                    else size.width.toDp.dp,
+                                    if (size == IntSize.Zero) Dp.Unspecified
+                                    else size.height.toDp.dp
+                                )
+                                .clip(CircleShape)
+                                .background(color2)
+                        ) {
+                            if (size != IntSize.Zero) {
+                                CircularProgressIndicator(
+                                    progress = videoProgressAnim,
+                                    Modifier.fillMaxSize(),
+                                    strokeWidth = 4.dp,
+                                    color = color1
+                                )
+                            }
+                            Box(
+                                Modifier
+                                    .align(Alignment.Center)
+                                    .onSizeChanged {
+                                        size = it
+                                    }
+                                    .padding(4.dp)) {
+                                captureBtn {
+                                    if (!isVideoFlow) {
+                                        takePhoto(
+                                            context = context,
+                                            perfix = perfix,
+                                            imageCapture = imageCapture,
+                                            executor = Executors.newSingleThreadExecutor(),
+                                            onImageCaptured = ::handleCapture
+                                        )
+                                    } else {
+                                        if (!isRecording) {
+                                            startVideoRecording(
+                                                context,
+                                                perfix,
+                                                videoCapture,
+                                                currentRecording,
+                                                {
+                                                    isRecording = true
+                                                },
+                                                { file, error ->
+                                                    stopVideoRecording()
+                                                    handleCapture(file, error)
+                                                })
+                                        } else {
+                                            stopVideoRecording()
+                                        }
+                                    }
+
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            }
                         }
                     }
                 }
@@ -285,13 +428,27 @@ fun CameraView(
                     dismiss()
                 }
                 Box {
-                    GlideImg(
-                        file,
-                        Modifier
-                            .padding(top = 55.dp)
-                            .fillMaxWidth()
-                            .aspectRatio(3 / 4f)
-                    )
+
+                    if (isVideoFlow) {
+                        VideoView(
+                            file,
+                            Modifier
+                                .padding(top = 55.dp)
+                                .fillMaxWidth()
+                                .aspectRatio(3 / 4f)
+                                .background(Color.Black)
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .padding(top = 55.dp)
+                                .fillMaxWidth()
+                                .aspectRatio(3 / 4f)
+                        ) {
+                            GlideImg(file)
+                        }
+                    }
+
                     Row(
                         Modifier
                             .fillMaxSize()
@@ -318,6 +475,82 @@ fun CameraView(
     }
 }
 
+@Composable
+fun VideoView(videoFile: File?, modifier: Modifier) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            val mediaItem = MediaItem.fromUri(Uri.fromFile(videoFile))
+            setMediaItem(mediaItem)
+            prepare()
+            playWhenReady = true
+        }
+    }
+
+    // Χρησιμοποίησε το AndroidView ως κανονικό Composable
+    AndroidView(
+        factory = {
+            PlayerView(context).apply {
+                player = exoPlayer
+                useController = true // Ενεργοποίηση ελέγχων αναπαραγωγής
+            }
+        },
+        modifier = modifier
+    )
+
+    // Διαχείριση καθαρισμού του ExoPlayer
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+}
+
+@SuppressLint("MissingPermission", "CheckResult")
+private fun startVideoRecording(
+    context: Context,
+    perfix: String,
+    videoCapture: VideoCapture<Recorder>,
+    currentRecording: MutableState<Recording?>,
+    onRecordingStarted: () -> Unit,
+    onRecordingFinished: (f: File?, e: Exception?) -> Unit
+) {
+    val file = context.createVideoFile(perfix)
+    val outputOptions = FileOutputOptions.Builder(file).build()
+
+    currentRecording.value = videoCapture.output
+        .prepareRecording(context, outputOptions)
+        .withAudioEnabled()
+        .start(ContextCompat.getMainExecutor(context)) { recordEvent ->
+            when (recordEvent) {
+                is VideoRecordEvent.Start -> {
+                    onRecordingStarted()
+                    Log.d("CameraX", "Recording started")
+                }
+
+                is VideoRecordEvent.Finalize -> {
+                    if (!recordEvent.hasError()) {
+                        Log.d(
+                            "CameraX",
+                            "Recording finished: ${recordEvent.outputResults.outputUri}"
+                        )
+                        onRecordingFinished(file, null)
+                    } else {
+                        Log.e("CameraX", "Recording failed: ${recordEvent.error}")
+                        try {
+                            file.delete()
+                        } catch (_: Exception) {
+                        }
+                        onRecordingFinished(
+                            null,
+                            Exception("Recording failed! Code: ${recordEvent.error}")
+                        )
+                    }
+                }
+            }
+        }
+}
+
 private fun takePhoto(
     context: Context,
     perfix: String,
@@ -342,6 +575,10 @@ private fun takePhoto(
                         compress(file.path)
                         onImageCaptured(file, null)
                     } catch (e: Exception) {
+                        try {
+                            file.delete()
+                        } catch (_: Exception) {
+                        }
                         onImageCaptured(null, e)
                     }
                 }
@@ -349,7 +586,7 @@ private fun takePhoto(
         })
 }
 
-private suspend fun Context.getCameraProvider(onImageCaptured: (f: File?, e: Exception?) -> Unit): ProcessCameraProvider =
+private suspend fun Context.getCameraProvider(onCaptured: (f: File?, e: Exception?) -> Unit): ProcessCameraProvider =
     suspendCoroutine { continuation ->
         try {
             ProcessCameraProvider.getInstance(this.applicationContext).also { cameraProvider ->
@@ -358,6 +595,6 @@ private suspend fun Context.getCameraProvider(onImageCaptured: (f: File?, e: Exc
                 }, ContextCompat.getMainExecutor(this))
             }
         } catch (e: Exception) {
-            onImageCaptured(null, e)
+            onCaptured(null, e)
         }
     }

@@ -465,6 +465,17 @@ fun Context.createPhotoFile2(
     )
 }
 
+fun Context.createVideoFile(
+    name: String = "%s",
+): File {
+    val timeStamp: String = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(Date())
+    return File.createTempFile(
+        "${String.format(name, timeStamp)}_",
+        ".mp4",
+        this.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
+    )
+}
+
 fun compress(filePath: String) {
     //Keep exif information
     val exifInterface = ExifInterface(filePath)

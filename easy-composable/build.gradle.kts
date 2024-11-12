@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.camera:camera-camera2:$cameraX")
     implementation("androidx.camera:camera-lifecycle:$cameraX")
     implementation("androidx.camera:camera-view:$cameraX")
+    implementation("androidx.camera:camera-video:$cameraX")
 
     //Glide
     implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
@@ -62,6 +63,10 @@ dependencies {
     implementation("com.github.krottv:compose-sliders:0.1.4")
     //In-app update
     implementation("com.google.android.play:app-update-ktx:2.1.0")
+    //Video payer
+    val player = "1.4.1"
+    implementation("androidx.media3:media3-exoplayer:$player")
+    implementation("androidx.media3:media3-ui:$player")
 }
 
 afterEvaluate {
