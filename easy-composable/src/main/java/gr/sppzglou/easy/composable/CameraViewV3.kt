@@ -739,7 +739,7 @@ fun Context.moveToPublicPicturesFolder(privateFile: File, folder: String): Uri? 
         put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
         put(
             MediaStore.Images.Media.RELATIVE_PATH,
-            "${Environment.DIRECTORY_DOCUMENTS}/$folder/images"
+            "${Environment.DIRECTORY_PICTURES}/$folder/images"
         )
     }
 
