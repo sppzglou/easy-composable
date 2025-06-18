@@ -454,17 +454,6 @@ fun Context.createPhotoFile(
     )
 }
 
-fun Context.createPhotoFile2(
-    name: String = "%s",
-): File {
-    val timeStamp: String = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(Date())
-    return File.createTempFile(
-        "${String.format(name, timeStamp)}_",
-        ".jpg",
-        this.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-    )
-}
-
 fun Context.createVideoFile(
     name: String = "%s",
 ): File {

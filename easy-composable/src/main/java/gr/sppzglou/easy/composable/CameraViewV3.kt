@@ -1,8 +1,11 @@
 package gr.sppzglou.easy.composable
 
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -71,8 +74,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.System.currentTimeMillis
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
@@ -80,7 +87,7 @@ import kotlin.coroutines.suspendCoroutine
 
 @SuppressLint("ClickableViewAccessibility", "RestrictedApi", "SetJavaScriptEnabled")
 @Composable
-fun CameraView(
+fun CameraView3(
     backBtn: @Composable () -> Unit,
     flashBtn: @Composable (Boolean, suspend () -> Unit) -> Unit,
     captureBtn: @Composable (suspend () -> Unit) -> Unit,
@@ -92,11 +99,13 @@ fun CameraView(
     corners: Dp = 0.dp,
     color1: Color = Color.Black,
     color2: Color = Color.White,
-    specialBtn: (@Composable ((File?, Exception?) -> Unit) -> Unit)? = null,
+    specialBtn: (@Composable ((privateFile: File?, publicUri: Uri?, e: Exception?) -> Unit) -> Unit)? = null,
     perfix: String = "",
+    publicAppFolderName: String,
+    isPublicFile: Boolean = false,
     allowPhoto: Boolean = true,
     allowVideo: Boolean = false,
-    handler: (f: File?, e: Exception?) -> Unit
+    handler: (privateFile: File?, publicUri: Uri?, e: Exception?) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     val lensFacing by rem(CameraSelector.LENS_FACING_BACK)
@@ -128,6 +137,12 @@ fun CameraView(
             .build()
     }
     var file by rem<File?>(null)
+    var uri by rem<Uri?>(null)
+
+    fun clearFiles() {
+        file = null
+        uri = null
+    }
 
     LaunchedEffect(isRecording) {
         val start = currentTimeMillis()
@@ -138,16 +153,20 @@ fun CameraView(
         videoProgress = 0f
     }
 
-    fun handleCapture(f: File?, e: Exception?) {
-        if (f != null) {
+    fun handleCapture(privateFile: File?, publicUri: Uri?, e: Exception?) {
+        if (privateFile != null) {
             showPreviewCase = 0
-            file = f
+            file = privateFile
+            showPreview = true
+        } else if (publicUri != null) {
+            showPreviewCase = 0
+            uri = publicUri
             showPreview = true
         } else {
-            file = null
+            clearFiles()
             showPreview = false
             act?.runOnUiThread {
-                handler(null, e)
+                handler(null, null, e)
             }
         }
     }
@@ -387,6 +406,8 @@ fun CameraView(
                                         takePhoto(
                                             context = context,
                                             perfix = perfix,
+                                            folder = publicAppFolderName,
+                                            isPublicFile = isPublicFile,
                                             imageCapture = imageCapture,
                                             executor = Executors.newSingleThreadExecutor(),
                                             onImageCaptured = ::handleCapture
@@ -394,17 +415,20 @@ fun CameraView(
                                     } else {
                                         if (!isRecording) {
                                             startVideoRecording(
-                                                context,
-                                                perfix,
-                                                videoCapture,
-                                                currentRecording,
-                                                {
+                                                context = context,
+                                                folder = publicAppFolderName,
+                                                isPublicFile = isPublicFile,
+                                                perfix = perfix,
+                                                videoCapture = videoCapture,
+                                                currentRecording = currentRecording,
+                                                onRecordingStarted = {
                                                     isRecording = true
                                                 },
-                                                { file, error ->
+                                                onRecordingFinished = { file, uri, error ->
                                                     stopVideoRecording()
-                                                    handleCapture(file, error)
-                                                })
+                                                    handleCapture(file, uri, error)
+                                                }
+                                            )
                                         } else {
                                             stopVideoRecording()
                                         }
@@ -416,13 +440,16 @@ fun CameraView(
                         }
                     }
                 }
-            } else if (showPreview && file != null) {
+            } else if (showPreview && (file != null || uri != null)) {
                 fun dismiss() {
                     file?.let {
                         if (it.exists() && showPreviewCase == 0) it.delete()
                     }
+                    uri?.let {
+                        if (showPreviewCase == 0) it.delete(context)
+                    }
                     showPreview = false
-                    file = null
+                    clearFiles()
                 }
                 BackPressHandler {
                     dismiss()
@@ -431,7 +458,7 @@ fun CameraView(
 
                     if (isVideoFlow) {
                         VideoView(
-                            file,
+                            file, uri,
                             Modifier
                                 .padding(top = 55.dp)
                                 .fillMaxWidth()
@@ -445,7 +472,12 @@ fun CameraView(
                                 .fillMaxWidth()
                                 .aspectRatio(3 / 4f)
                         ) {
-                            GlideImg(file)
+                            file?.let {
+                                GlideImg(it)
+                            }
+                            uri?.let {
+                                GlideImg(it)
+                            }
                         }
                     }
 
@@ -461,10 +493,10 @@ fun CameraView(
                             dismiss()
                         }
                         acceptBtn {
-                            handler(file, null)
+                            handler(file, uri, null)
                             close()
                             showPreview = false
-                            file = null
+                            clearFiles()
                         }
                     }
                 }
@@ -472,6 +504,18 @@ fun CameraView(
                 progressView()
             }
         }
+    }
+}
+
+@Composable
+fun VideoView(videoFile: File?, videoUri: Uri?, modifier: Modifier) {
+    videoFile?.let {
+        VideoView(it, modifier)
+        return
+    }
+    videoUri?.let {
+        VideoView(it, modifier)
+        return
     }
 }
 
@@ -506,17 +550,51 @@ private fun VideoView(videoFile: File?, modifier: Modifier) {
     }
 }
 
+@Composable
+fun VideoView(videoUri: Uri?, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+
+    if (videoUri == null) return
+
+    val exoPlayer = remember(videoUri) {
+        ExoPlayer.Builder(context).build().apply {
+            val mediaItem = MediaItem.fromUri(videoUri)
+            setMediaItem(mediaItem)
+            prepare()
+            playWhenReady = true
+        }
+    }
+
+    AndroidView(
+        factory = {
+            PlayerView(context).apply {
+                player = exoPlayer
+                useController = true
+            }
+        },
+        modifier = modifier
+    )
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+}
+
 @SuppressLint("MissingPermission", "CheckResult")
 private fun startVideoRecording(
     context: Context,
+    folder: String,
+    isPublicFile: Boolean,
     perfix: String,
     videoCapture: VideoCapture<Recorder>,
     currentRecording: MutableState<Recording?>,
     onRecordingStarted: () -> Unit,
-    onRecordingFinished: (f: File?, e: Exception?) -> Unit
+    onRecordingFinished: (privateFile: File?, publicUri: Uri?, e: Exception?) -> Unit
 ) {
-    val file = context.createVideoFile(perfix)
-    val outputOptions = FileOutputOptions.Builder(file).build()
+    val privateFile = context.createVideoFile(perfix)
+    val outputOptions = FileOutputOptions.Builder(privateFile).build()
 
     currentRecording.value = videoCapture.output
         .prepareRecording(context, outputOptions)
@@ -529,22 +607,44 @@ private fun startVideoRecording(
                 }
 
                 is VideoRecordEvent.Finalize -> {
-                    if (!recordEvent.hasError()) {
-                        Log.d(
-                            "CameraX",
-                            "Recording finished: ${recordEvent.outputResults.outputUri}"
-                        )
-                        onRecordingFinished(file, null)
-                    } else {
-                        Log.e("CameraX", "Recording failed: ${recordEvent.error}")
-                        try {
-                            file.delete()
-                        } catch (_: Exception) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (!recordEvent.hasError()) {
+                            try {
+                                if (isPublicFile) {
+                                    val publicUri =
+                                        context.moveToPublicVideoFolder(privateFile, folder)
+                                    privateFile.delete()
+                                    withContext(Dispatchers.Main) {
+                                        onRecordingFinished(null, publicUri, null)
+                                    }
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        onRecordingFinished(privateFile, null, null)
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                try {
+                                    privateFile.delete()
+                                } catch (_: Exception) {
+                                }
+                                withContext(Dispatchers.Main) {
+                                    onRecordingFinished(null, null, e)
+                                }
+                            }
+                        } else {
+                            Log.e("CameraX", "Recording failed: ${recordEvent.error}")
+                            try {
+                                privateFile.delete()
+                            } catch (_: Exception) {
+                            }
+                            withContext(Dispatchers.Main) {
+                                onRecordingFinished(
+                                    null,
+                                    null,
+                                    Exception("Recording failed! Code: ${recordEvent.error}")
+                                )
+                            }
                         }
-                        onRecordingFinished(
-                            null,
-                            Exception("Recording failed! Code: ${recordEvent.error}")
-                        )
                     }
                 }
             }
@@ -553,40 +653,111 @@ private fun startVideoRecording(
 
 private fun takePhoto(
     context: Context,
+    folder: String,
+    isPublicFile: Boolean,
     perfix: String,
     imageCapture: ImageCapture,
     executor: Executor,
-    onImageCaptured: (f: File?, e: Exception?) -> Unit
+    onImageCaptured: (privateFile: File?, publicUri: Uri?, e: Exception?) -> Unit
 ) {
-    val file = context.createPrivatePhotoFile(perfix)
-    val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
+    val privateFile = context.createPrivatePhotoFile(perfix)
+    val outputOptions = ImageCapture.OutputFileOptions.Builder(privateFile).build()
 
     imageCapture.takePicture(
         outputOptions,
         executor,
         object : ImageCapture.OnImageSavedCallback {
             override fun onError(exception: ImageCaptureException) {
-                onImageCaptured(null, exception)
+                onImageCaptured(null, null, exception)
             }
 
             override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        compress(file.path)
-                        onImageCaptured(file, null)
+                        compress(privateFile.path)
+                        if (isPublicFile) {
+                            val publicUri = context.moveToPublicPicturesFolder(privateFile, folder)
+                            privateFile.delete()
+                            withContext(Dispatchers.Main) {
+                                onImageCaptured(null, publicUri, null)
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                onImageCaptured(privateFile, null, null)
+                            }
+                        }
                     } catch (e: Exception) {
                         try {
-                            file.delete()
+                            privateFile.delete()
                         } catch (_: Exception) {
                         }
-                        onImageCaptured(null, e)
+                        withContext(Dispatchers.Main) {
+                            onImageCaptured(null, null, e)
+                        }
                     }
                 }
             }
         })
 }
 
-private suspend fun Context.getCameraProvider(onCaptured: (f: File?, e: Exception?) -> Unit): ProcessCameraProvider =
+fun Context.createPrivatePhotoFile(
+    name: String = "%s",
+): File {
+    val timeStamp: String = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(Date())
+    return File.createTempFile(
+        "${String.format(name, timeStamp)}_",
+        ".jpg",
+        this.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    )
+}
+
+fun Context.moveToPublicVideoFolder(privateFile: File, folder: String): Uri? {
+    val fileName = privateFile.name
+    val contentValues = ContentValues().apply {
+        put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
+        put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+        put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$folder")
+    }
+
+    val uri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+    uri?.let {
+        contentResolver.openOutputStream(it)?.use { output ->
+            privateFile.inputStream().use { input ->
+                input.copyTo(output)
+            }
+        }
+    }
+
+    return uri
+}
+
+fun Context.moveToPublicPicturesFolder(privateFile: File, folder: String): Uri? {
+    val fileName = privateFile.name
+    val contentValues = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+        put(
+            MediaStore.Images.Media.RELATIVE_PATH,
+            "${Environment.DIRECTORY_DOCUMENTS}/$folder/images"
+        )
+    }
+
+    val resolver = contentResolver
+    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+    uri?.let {
+        resolver.openOutputStream(it)?.use { output ->
+            privateFile.inputStream().use { input ->
+                input.copyTo(output)
+            }
+        }
+    }
+
+    return uri
+}
+
+private suspend fun Context.getCameraProvider(onCaptured: (privateFile: File?, publicUri: Uri?, e: Exception?) -> Unit): ProcessCameraProvider =
     suspendCoroutine { continuation ->
         try {
             ProcessCameraProvider.getInstance(this.applicationContext).also { cameraProvider ->
@@ -595,6 +766,14 @@ private suspend fun Context.getCameraProvider(onCaptured: (f: File?, e: Exceptio
                 }, ContextCompat.getMainExecutor(this))
             }
         } catch (e: Exception) {
-            onCaptured(null, e)
+            onCaptured(null, null, e)
         }
     }
+
+fun Uri.delete(context: Context): Boolean {
+    return try {
+        context.contentResolver.delete(this, null, null) > 0
+    } catch (e: Exception) {
+        false
+    }
+}
